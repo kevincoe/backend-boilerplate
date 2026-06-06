@@ -2,6 +2,8 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { z } from 'zod';
+import { errorHandler } from './middlewares/errorHandler.middleware';
+import { orderRoutes } from './routes/order.routes';
 
 const app: Application = express();
 
@@ -41,5 +43,11 @@ app.post('/api/users', (req: Request, res: Response) => {
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', uptime: process.uptime() });
 });
+
+// Add your other routes here...
+app.use('/api/orders', orderRoutes);
+
+// Global Error Handler MUST be the last middleware
+app.use(errorHandler);
 
 export default app;

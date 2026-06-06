@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderState {
+  DRAFT
+  AWAITING_DEPOSIT
+  RESERVED
+  IN_PROGRESS
+  PENDING_INSPECTION
+  COMPLETED
+  COMPLETED_WITH_DAMAGES
+}
+
+enum AssetState {
+  AVAILABLE
+  RESERVED
+  RENTED
+  IN_INSPECTION
+  IN_MAINTENANCE
+  TOTAL_LOSS
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String
+  document  String   @unique // CPF/CNPJ
+  score     Int      @default(100) // Score de confiabilidade
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductBase {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  dailyPrice  Decimal  @db.Decimal(10, 2)
+  assets      Asset[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Asset {
+  id             String           @id @default(uuid())
+  productBaseId  String
+  product        ProductBase      @relation(fields: [productBaseId], references: [id])
+  serialNumber   String           @unique // Ex: MESA-CIL-01
+  state          AssetState       @default(AVAILABLE)
+  orders         OrderAsset[]
+  maintenanceLog MaintenanceLog[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model Order {
+  id          String       @id @default(uuid())
+  customerId  String
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  state       OrderState   @default(DRAFT)
+  totalAmount Decimal      @db.Decimal(10, 2)
+  pickUpDate  DateTime
+  returnDate  DateTime
+  assets      OrderAsset[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// Tabela associativa (N:M) explícita para registrar quais ativos estão em quais pedidos
+model OrderAsset {
+  orderId String
+  assetId String
+  order   Order  @relation(fields: [orderId], references: [id])
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  @@id([orderId, assetId])
+}
+
+model MaintenanceLog {
+  id          String   @id @default(uuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id])
+  description String
+  cost        Decimal? @db.Decimal(10, 2)
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
