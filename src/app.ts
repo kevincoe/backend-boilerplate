@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { z } from 'zod';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 import { orderRoutes } from './routes/order.routes';
+import { productRoutes } from './routes/product.routes';
 
 const app: Application = express();
 
@@ -46,6 +47,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 // Add your other routes here...
 app.use('/api/orders', orderRoutes);
+app.use('/api/products', productRoutes);
 
 // Global Error Handler MUST be the last middleware
 app.use(errorHandler);
