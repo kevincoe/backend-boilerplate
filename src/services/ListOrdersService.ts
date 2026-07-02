@@ -1,4 +1,4 @@
-import { OrderData } from './CreateQuoteService';
+import { OrderData } from "./CreateQuoteService";
 
 export interface IListOrdersRepository {
   findAll(): Promise<OrderData[]>;

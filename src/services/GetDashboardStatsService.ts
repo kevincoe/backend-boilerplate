@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import { OrderState } from '../domain/OrderState';
+import { PrismaClient } from "@prisma/client";
+import { OrderState } from "../domain/OrderState";
 
 export class GetDashboardStatsService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -10,20 +10,20 @@ export class GetDashboardStatsService {
 
     // Equipamentos Locados (Assets indisponíveis)
     const rentedEquipment = await this.prisma.asset.count({
-      where: { state: { not: 'AVAILABLE' } }
+      where: { state: { not: "AVAILABLE" } },
     });
 
     // 2. Clientes Ativos (Temos pedidos recentes)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     // Contar clientes distintos com pedidos criados nos últimos 30 dias que não são rascunho
     const activeCustomersData = await this.prisma.order.groupBy({
-      by: ['customerId'],
+      by: ["customerId"],
       where: {
         createdAt: { gte: thirtyDaysAgo },
-        state: { not: OrderState.DRAFT }
-      }
+        state: { not: OrderState.DRAFT },
+      },
     });
     const activeCustomers = activeCustomersData.length;
 
@@ -32,11 +32,11 @@ export class GetDashboardStatsService {
       OrderState.AWAITING_DEPOSIT,
       OrderState.RESERVED,
       OrderState.IN_PROGRESS,
-      OrderState.PENDING_INSPECTION
+      OrderState.PENDING_INSPECTION,
     ];
-    
+
     const activeOrders = await this.prisma.order.count({
-      where: { state: { in: inProgressStates } }
+      where: { state: { in: inProgressStates } },
     });
 
     // 4. Faturamento do Mês
@@ -51,18 +51,18 @@ export class GetDashboardStatsService {
       _sum: { totalAmount: true },
       where: {
         createdAt: { gte: startOfMonth, lt: endOfMonth },
-        state: { notIn: [OrderState.DRAFT] }
-      }
+        state: { notIn: [OrderState.DRAFT] },
+      },
     });
     const monthlyRevenue = revenueAggregation._sum.totalAmount || 0;
 
     // 5. Atividades Recentes
     const recentOrders = await this.prisma.order.findMany({
       take: 5,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         customer: { select: { name: true } },
-      }
+      },
     });
 
     return {
@@ -71,7 +71,7 @@ export class GetDashboardStatsService {
       activeCustomers,
       activeOrders,
       monthlyRevenue,
-      recentOrders
+      recentOrders,
     };
   }
 }

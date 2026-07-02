@@ -1,4 +1,4 @@
-import { ProductRepository } from '../repositories/ProductRepository';
+import { ProductRepository } from "../repositories/ProductRepository";
 
 interface SearchProductsRequest {
   page: number;
@@ -10,7 +10,12 @@ interface SearchProductsRequest {
 export class SearchProductsService {
   constructor(private readonly productRepository: ProductRepository) {}
 
-  public async execute({ page, limit, search, category }: SearchProductsRequest) {
+  public async execute({
+    page,
+    limit,
+    search,
+    category,
+  }: SearchProductsRequest) {
     const { products, total } = await this.productRepository.findAll({
       page,
       limit,
@@ -20,14 +25,16 @@ export class SearchProductsService {
 
     const formattedProducts = products.map((product) => {
       const totalStock = product.assets.length;
-      const availableStock = product.assets.filter((asset) => asset.state === 'AVAILABLE').length;
+      const availableStock = product.assets.filter(
+        (asset) => asset.state === "AVAILABLE",
+      ).length;
 
       return {
         id: product.id,
         name: product.name,
-        description: product.description || '',
+        description: product.description || "",
         pricePerDay: Number(product.dailyPrice),
-        imageUrl: product.imageUrl || '',
+        imageUrl: product.imageUrl || "",
         isAvailable: availableStock > 0,
         totalStock,
         availableStock,

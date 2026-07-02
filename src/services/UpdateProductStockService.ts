@@ -1,5 +1,5 @@
-import { ProductRepository } from '../repositories/ProductRepository';
-import { AppError } from '../errors/AppError';
+import { ProductRepository } from "../repositories/ProductRepository";
+import { AppError } from "../errors/AppError";
 
 interface UpdateStockRequest {
   id: string;
@@ -11,12 +11,12 @@ export class UpdateProductStockService {
 
   public async execute({ id, newStockQuantity }: UpdateStockRequest) {
     if (newStockQuantity < 0) {
-      throw new AppError('O estoque não pode ser negativo.', 400);
+      throw new AppError("O estoque não pode ser negativo.", 400);
     }
 
     const product = await this.productRepository.findById(id);
     if (!product) {
-      throw new AppError('Produto não encontrado.', 404);
+      throw new AppError("Produto não encontrado.", 404);
     }
 
     // We need to fetch the assets to know the current stock
@@ -38,26 +38,36 @@ export class UpdateProductStockService {
     } else if (difference < 0) {
       // Remove assets. We can only remove AVAILABLE assets.
       const quantityToRemove = Math.abs(difference);
-      const availableAssets = await this.productRepository.getAvailableAssets(id, quantityToRemove);
-      
+      const availableAssets = await this.productRepository.getAvailableAssets(
+        id,
+        quantityToRemove,
+      );
+
       if (availableAssets.length < quantityToRemove) {
-        throw new AppError(`Não é possível reduzir o estoque em ${quantityToRemove}. Apenas ${availableAssets.length} unidades estão 'AVAILABLE' (as demais estão alugadas ou reservadas).`, 400);
+        throw new AppError(
+          `Não é possível reduzir o estoque em ${quantityToRemove}. Apenas ${availableAssets.length} unidades estão 'AVAILABLE' (as demais estão alugadas ou reservadas).`,
+          400,
+        );
       }
-      
-      await this.productRepository.removeAssets(availableAssets.map(a => a.id));
+
+      await this.productRepository.removeAssets(
+        availableAssets.map((a) => a.id),
+      );
     }
 
     // Return the updated product
     const updatedProduct = await this.productRepository.update(id, {});
     const totalStock = updatedProduct.assets.length;
-    const availableStock = updatedProduct.assets.filter(a => a.state === 'AVAILABLE').length;
+    const availableStock = updatedProduct.assets.filter(
+      (a) => a.state === "AVAILABLE",
+    ).length;
 
     return {
       id: updatedProduct.id,
       name: updatedProduct.name,
-      description: updatedProduct.description || '',
+      description: updatedProduct.description || "",
       pricePerDay: Number(updatedProduct.dailyPrice),
-      imageUrl: updatedProduct.imageUrl || '',
+      imageUrl: updatedProduct.imageUrl || "",
       isAvailable: availableStock > 0,
       totalStock,
       availableStock,

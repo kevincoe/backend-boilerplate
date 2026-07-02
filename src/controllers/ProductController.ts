@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
-import { z } from 'zod';
-import { ProductCategory } from '@prisma/client';
-import { SearchProductsService } from '../services/SearchProductsService';
-import { CreateProductService } from '../services/CreateProductService';
-import { UpdateProductService } from '../services/UpdateProductService';
-import { UpdateProductStockService } from '../services/UpdateProductStockService';
-import { DeleteProductService } from '../services/DeleteProductService';
+import { Request, Response } from "express";
+import { z } from "zod";
+import { ProductCategory } from "@prisma/client";
+import { SearchProductsService } from "../services/SearchProductsService";
+import { CreateProductService } from "../services/CreateProductService";
+import { UpdateProductService } from "../services/UpdateProductService";
+import { UpdateProductStockService } from "../services/UpdateProductStockService";
+import { DeleteProductService } from "../services/DeleteProductService";
 
 export class ProductController {
   constructor(
@@ -13,7 +13,7 @@ export class ProductController {
     private readonly createService: CreateProductService,
     private readonly updateService: UpdateProductService,
     private readonly updateStockService: UpdateProductStockService,
-    private readonly deleteService: DeleteProductService
+    private readonly deleteService: DeleteProductService,
   ) {}
 
   public async index(req: Request, res: Response): Promise<Response> {
@@ -32,8 +32,8 @@ export class ProductController {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      console.error('Erro ao buscar produtos:', error);
-      return res.status(500).json({ error: 'Erro interno ao buscar produtos' });
+      console.error("Erro ao buscar produtos:", error);
+      return res.status(500).json({ error: "Erro interno ao buscar produtos" });
     }
   }
 
@@ -51,12 +51,15 @@ export class ProductController {
       const data = bodySchema.parse(req.body);
       const product = await this.createService.execute(data);
       return res.status(201).json(product);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      const statusCode = error.statusCode || 500;
-      return res.status(statusCode).json({ message: error.message || 'Erro interno ao criar produto' });
+      const err = error as { statusCode?: number; message?: string };
+      const statusCode = err.statusCode || 500;
+      return res
+        .status(statusCode)
+        .json({ message: err.message || "Erro interno ao criar produto" });
     }
   }
 
@@ -74,12 +77,15 @@ export class ProductController {
       const data = bodySchema.parse(req.body);
       const product = await this.updateService.execute({ id, ...data });
       return res.json(product);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      const statusCode = error.statusCode || 500;
-      return res.status(statusCode).json({ message: error.message || 'Erro interno ao atualizar produto' });
+      const err = error as { statusCode?: number; message?: string };
+      const statusCode = err.statusCode || 500;
+      return res.status(statusCode).json({
+        message: err.message || "Erro interno ao atualizar produto",
+      });
     }
   }
 
@@ -91,26 +97,35 @@ export class ProductController {
 
     try {
       const { newStockQuantity } = bodySchema.parse(req.body);
-      const product = await this.updateStockService.execute({ id, newStockQuantity });
+      const product = await this.updateStockService.execute({
+        id,
+        newStockQuantity,
+      });
       return res.json(product);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      const statusCode = error.statusCode || 500;
-      return res.status(statusCode).json({ message: error.message || 'Erro interno ao atualizar estoque' });
+      const err = error as { statusCode?: number; message?: string };
+      const statusCode = err.statusCode || 500;
+      return res.status(statusCode).json({
+        message: err.message || "Erro interno ao atualizar estoque",
+      });
     }
   }
 
   public async delete(req: Request, res: Response): Promise<Response> {
     const { id } = req.params;
-    
+
     try {
       await this.deleteService.execute(id);
       return res.status(204).send();
-    } catch (error: any) {
-      const statusCode = error.statusCode || 500;
-      return res.status(statusCode).json({ message: error.message || 'Erro interno ao excluir produto' });
+    } catch (error: unknown) {
+      const err = error as { statusCode?: number; message?: string };
+      const statusCode = err.statusCode || 500;
+      return res.status(statusCode).json({
+        message: err.message || "Erro interno ao deletar produto",
+      });
     }
   }
 }

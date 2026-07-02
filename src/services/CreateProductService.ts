@@ -1,6 +1,6 @@
-import { ProductRepository } from '../repositories/ProductRepository';
-import { AppError } from '../errors/AppError';
-import { ProductCategory } from '@prisma/client';
+import { ProductRepository } from "../repositories/ProductRepository";
+import { AppError } from "../errors/AppError";
+import { ProductCategory } from "@prisma/client";
 
 interface CreateProductRequest {
   name: string;
@@ -16,13 +16,13 @@ export class CreateProductService {
 
   public async execute(data: CreateProductRequest) {
     if (data.pricePerDay <= 0) {
-      throw new AppError('O preço por dia deve ser maior que zero.', 400);
+      throw new AppError("O preço por dia deve ser maior que zero.", 400);
     }
     if (data.stock < 0) {
-      throw new AppError('O estoque não pode ser negativo.', 400);
+      throw new AppError("O estoque não pode ser negativo.", 400);
     }
     if (!(data.category in ProductCategory)) {
-      throw new AppError('Categoria inválida.', 400);
+      throw new AppError("Categoria inválida.", 400);
     }
 
     const product = await this.productRepository.create(
@@ -33,16 +33,16 @@ export class CreateProductService {
         category: data.category,
         imageUrl: data.imageUrl,
       },
-      data.stock
+      data.stock,
     );
 
     return {
       id: product.id,
       name: product.name,
-      description: product.description || '',
+      description: product.description || "",
       pricePerDay: Number(product.dailyPrice),
-      imageUrl: product.imageUrl || '',
-      isAvailable: product.assets.some(asset => asset.state === 'AVAILABLE'),
+      imageUrl: product.imageUrl || "",
+      isAvailable: product.assets.some((asset) => asset.state === "AVAILABLE"),
       category: product.category,
     };
   }

@@ -1,6 +1,6 @@
-import { ProductRepository } from '../repositories/ProductRepository';
-import { AppError } from '../errors/AppError';
-import { ProductCategory } from '@prisma/client';
+import { ProductRepository } from "../repositories/ProductRepository";
+import { AppError } from "../errors/AppError";
+import { ProductCategory } from "@prisma/client";
 
 interface UpdateProductRequest {
   id: string;
@@ -17,11 +17,11 @@ export class UpdateProductService {
   public async execute({ id, ...data }: UpdateProductRequest) {
     const productExists = await this.productRepository.findById(id);
     if (!productExists) {
-      throw new AppError('Produto não encontrado.', 404);
+      throw new AppError("Produto não encontrado.", 404);
     }
 
     if (data.pricePerDay !== undefined && data.pricePerDay <= 0) {
-      throw new AppError('O preço por dia deve ser maior que zero.', 400);
+      throw new AppError("O preço por dia deve ser maior que zero.", 400);
     }
 
     const updatedProduct = await this.productRepository.update(id, {
@@ -30,14 +30,16 @@ export class UpdateProductService {
     });
 
     const totalStock = updatedProduct.assets.length;
-    const availableStock = updatedProduct.assets.filter(a => a.state === 'AVAILABLE').length;
+    const availableStock = updatedProduct.assets.filter(
+      (a) => a.state === "AVAILABLE",
+    ).length;
 
     return {
       id: updatedProduct.id,
       name: updatedProduct.name,
-      description: updatedProduct.description || '',
+      description: updatedProduct.description || "",
       pricePerDay: Number(updatedProduct.dailyPrice),
-      imageUrl: updatedProduct.imageUrl || '',
+      imageUrl: updatedProduct.imageUrl || "",
       isAvailable: availableStock > 0,
       totalStock,
       availableStock,

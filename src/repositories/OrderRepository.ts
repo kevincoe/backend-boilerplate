@@ -1,6 +1,6 @@
-import { PrismaClient, Order, OrderAsset } from '@prisma/client';
-import { OrderState } from '../domain/OrderState';
-import { AssetState } from '../domain/AssetState';
+import { PrismaClient, Order, OrderAsset } from "@prisma/client";
+import { OrderState } from "../domain/OrderState";
+import { AssetState } from "../domain/AssetState";
 
 export type OrderWithAssets = Order & { assets: OrderAsset[] };
 
@@ -26,11 +26,11 @@ export class OrderRepository {
         totalAmount: data.totalAmount,
         assets: {
           create: data.assetIds.map((id: string) => ({
-            asset: { connect: { id } }
-          }))
-        }
+            asset: { connect: { id } },
+          })),
+        },
       },
-      include: { assets: true }
+      include: { assets: true },
     });
   }
 
@@ -43,53 +43,61 @@ export class OrderRepository {
           include: {
             asset: {
               include: {
-                product: true
-              }
-            }
-          }
-        }
-      }
+                product: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
   public async findAll(): Promise<Order[]> {
     return this.prisma.order.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         customer: true,
         assets: {
           include: {
             asset: {
               include: {
-                product: true
-              }
-            }
-          }
-        }
-      }
+                product: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
   public async updateState(id: string, state: OrderState): Promise<Order> {
     return this.prisma.order.update({
       where: { id },
-      data: { state }
+      data: { state },
     });
   }
 
-  public async updateAssetStates(assetIds: string[], state: AssetState): Promise<void> {
+  public async updateAssetStates(
+    assetIds: string[],
+    state: AssetState,
+  ): Promise<void> {
     await this.prisma.asset.updateMany({
       where: { id: { in: assetIds } },
-      data: { state }
+      data: { state },
     });
   }
 
-  public async checkAssetsAvailability(assetIds: string[], startDate: Date, endDate: Date, excludeOrderId?: string): Promise<string[]> {
+  public async checkAssetsAvailability(
+    assetIds: string[],
+    startDate: Date,
+    endDate: Date,
+    excludeOrderId?: string,
+  ): Promise<string[]> {
     const blockingStates = [
       OrderState.AWAITING_DEPOSIT,
       OrderState.RESERVED,
       OrderState.IN_PROGRESS,
-      OrderState.PENDING_INSPECTION
+      OrderState.PENDING_INSPECTION,
     ];
 
     const overlappingOrders = await this.prisma.order.findMany({
@@ -98,11 +106,11 @@ export class OrderRepository {
         state: { in: blockingStates },
         AND: [
           { pickUpDate: { lt: endDate } },
-          { returnDate: { gt: startDate } }
+          { returnDate: { gt: startDate } },
         ],
-        assets: { some: { assetId: { in: assetIds } } }
+        assets: { some: { assetId: { in: assetIds } } },
       },
-      include: { assets: true }
+      include: { assets: true },
     });
 
     const unavailableAssets = new Set<string>();
@@ -117,7 +125,10 @@ export class OrderRepository {
     return Array.from(unavailableAssets);
   }
 
-  public async update(id: string, data: { pickUpDate?: Date; returnDate?: Date; totalAmount?: number }): Promise<Order> {
+  public async update(
+    id: string,
+    data: { pickUpDate?: Date; returnDate?: Date; totalAmount?: number },
+  ): Promise<Order> {
     return this.prisma.order.update({
       where: { id },
       data,
@@ -128,7 +139,7 @@ export class OrderRepository {
     await this.prisma.orderAsset.deleteMany({
       where: { orderId: id },
     });
-    
+
     await this.prisma.order.delete({
       where: { id },
     });

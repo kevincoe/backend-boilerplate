@@ -1,4 +1,4 @@
-import { PrismaClient, Customer } from '@prisma/client';
+import { PrismaClient, Customer } from "@prisma/client";
 
 export class CustomerRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -12,11 +12,8 @@ export class CustomerRepository {
     // Busca pelo email ou documento
     let customer = await this.prisma.customer.findFirst({
       where: {
-        OR: [
-          { email: data.email },
-          { document: data.document }
-        ]
-      }
+        OR: [{ email: data.email }, { document: data.document }],
+      },
     });
 
     if (!customer) {
@@ -25,8 +22,8 @@ export class CustomerRepository {
           name: data.name,
           email: data.email,
           phone: data.phone,
-          document: data.document
-        }
+          document: data.document,
+        },
       });
     }
 
