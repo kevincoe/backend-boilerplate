@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsup src --format esm --clean",
-    "start": "node dist/server.js",
-    "lint": "eslint .",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "test": "vitest run"
+    "build": "tsup src --out-dir=dist --clean",
+    "start": "node dist/server.cjs",
+    "lint": "eslint src --ext .ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "test": "vitest",
+    "test:watch": "vitest --watch"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +25,7 @@
     "express-rate-limit": "^7.4.1",
     "helmet": "^8.1.0",
     "pg": "^8.21.0",
+    "winston": "^3.19.0",
     "zod": "^4.4.2"
   },
   "devDependencies": {

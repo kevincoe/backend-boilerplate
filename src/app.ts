@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 import { orderRoutes } from './routes/order.routes';
 import { productRoutes } from './routes/product.routes';
+import { requestLogger } from './middlewares/logging.middleware';
 
 const app: Application = express();
 
@@ -12,6 +13,7 @@ const app: Application = express();
 app.use(helmet()); // Segurança
 app.use(cors()); // Permite acesso do frontend
 app.use(express.json()); // Parse de JSON no body
+app.use(requestLogger); // Logging middleware
 
 // Exemplo de Rota com validação Zod
 app.post('/api/users', (req: Request, res: Response) => {
