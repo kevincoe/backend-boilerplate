@@ -1,89 +1,79 @@
-# Backend Boilerplate
+# Backend CRM Pegue-e-Monte
 
-A modern, robust, and scalable backend boilerplate built with **Node.js**, **Express**, and **TypeScript**. This boilerplate is structured following Clean Code principles, SOLID guidelines, and a layered architecture to ensure maintainability and scalability.
+Este é o backend do sistema CRM de Locação de Equipamentos "Pegue-e-Monte", construído com **Node.js**, **Express**, **TypeScript** e **Prisma ORM**.
 
-## 🚀 Technologies & Stack
+## 🚀 Tecnologias
 
 - **Runtime:** Node.js
-- **Framework:** Express
-- **Language:** TypeScript
-- **Validation:** Zod
-- **Development & Build:** `tsx` (watch mode) & `tsup`
-- **Testing:** Vitest
-- **Code Quality:** ESLint & Prettier
-- **Security:** Helmet & CORS
+- **Framework HTTP:** Express
+- **Linguagem:** TypeScript
+- **Banco de Dados:** SQLite (via Prisma ORM)
+- **Validação:** Zod
+- **Build/Dev:** `tsx` & `tsup`
+- **Qualidade:** ESLint, Prettier & Vitest
 
-## 📦 Getting Started
+## 📦 Passos para Rodar Localmente
 
-### Prerequisites
+### 1. Clonar o projeto (caso ainda não tenha feito)
+```bash
+git clone <URL_DO_SEU_REPOSITORIO>
+cd backend-boilerplate
+```
 
-Make sure you have Node.js and `npm` installed.
-
-### Installation
-
-Clone the repository and install the dependencies:
-
+### 2. Instalar as Dependências
 ```bash
 npm install
 ```
 
-### Running the Application
-
-- **Development Mode** (with hot reload):
-  ```bash
-  npm run dev
-  ```
-  *The server will start on `http://localhost:3333` (or the port defined in your `.env` file).*
-
-- **Build for Production:**
-  ```bash
-  npm run build
-  ```
-
-- **Start Production Server:**
-  ```bash
-  npm run start
-  ```
-
-### Code Quality & Testing
-
-- **Lint the code:**
-  ```bash
-  npm run lint
-  ```
-- **Format the code:**
-  ```bash
-  npm run format
-  ```
-- **Run Tests:**
-  ```bash
-  npm run test
-  ```
-
-## 📐 Architecture & Guidelines
-
-This project strictly adheres to a layered architecture approach to separate concerns effectively:
-
-- **Routes:** Maps incoming HTTP requests to their respective controllers.
-- **Controllers:** Handles HTTP requests and responses only.
-- **Services (Use Cases):** Contains the core business logic.
-- **Repositories (DAOs):** The only layer allowed to interact with the database.
-
-### Key Principles
-- **Validation:** All incoming data (Body, Params, Query) must be validated using **Zod** before hitting the Service layer.
-- **Error Handling:** Errors are managed centrally. Never expose sensitive stack traces in production.
-- **TypeScript:** Strict mode is enabled. Use of `any` is highly discouraged; prefer `unknown` with safe assertions.
-- **Clean Code:** Prioritize single responsibility, descriptive naming in English, and avoid deep nesting (use Early Returns).
-
-## 📡 Available Endpoints (Examples)
-
-- `GET /health` - Healthcheck endpoint to verify server status and uptime.
-- `POST /api/users` - Example endpoint demonstrating payload validation using Zod.
-
-## 📝 Environment Variables
-
-Create a `.env` file in the root directory. You can set the following variables:
-
+### 3. Configurar Variáveis de Ambiente
+Crie um arquivo `.env` na raiz do projeto (se não existir):
 ```env
 PORT=3333
+DATABASE_URL="file:./dev.db"
 ```
+
+### 4. Preparar o Banco de Dados (Prisma)
+Gere o Client do Prisma e rode as migrations para criar as tabelas no SQLite:
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+*(Opcional)* Você pode rodar o seed do banco para testar com dados falsos se houver seeders configurados:
+```bash
+npx prisma db seed
+```
+
+### 5. Iniciar o Servidor
+
+Para rodar em ambiente de desenvolvimento (com hot reload ativo):
+```bash
+npm run dev
+```
+O servidor estará disponível em: `http://localhost:3333`
+
+Para compilar para produção e rodar a versão final:
+```bash
+npm run build
+npm run start
+```
+
+## 🧪 Como Testar e Validar
+
+Você pode validar a saúde do servidor acessando o endpoint:
+```
+GET http://localhost:3333/health
+```
+
+Para rodar a suíte de testes unitários local:
+```bash
+npm run test
+```
+
+## 📐 Estrutura do Projeto (Clean Architecture)
+
+- **Routes:** Localizadas em `src/routes`, definem os endpoints (ex: `/api/orders`, `/api/products`).
+- **Controllers:** Localizados em `src/controllers`, interceptam req/res e repassam para os Services.
+- **Services:** Localizados em `src/services`, abrigam a lógica de negócio (Locação, Finalização de Pedido, Atualização de Estoque).
+- **Repositories:** Localizados em `src/repositories`, conversam exclusivamente com o Prisma DB.
+- **Middlewares:** Tratamento de erros e logging global em `src/middlewares`.
