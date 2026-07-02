@@ -10,4 +10,61 @@ export class AssetRepository {
       }
     });
   }
+
+  public async findAvailableAssetsForProduct(
+    productId: string,
+    quantity: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<(Asset & { product: { dailyPrice: import('@prisma/client/runtime/library').Decimal } })[]> {
+    const blockingStates = ['AWAITING_DEPOSIT', 'RESERVED', 'IN_PROGRESS', 'PENDING_INSPECTION'];
+    return this.prisma.asset.findMany({
+      where: {
+        productBaseId: productId,
+        state: 'AVAILABLE',
+        orders: {
+          none: {
+            order: {
+              state: { in: blockingStates as any },
+              AND: [
+                { pickUpDate: { lt: endDate } },
+                { returnDate: { gt: startDate } }
+              ]
+            }
+          }
+        }
+      },
+      include: {
+        product: {
+          select: { dailyPrice: true }
+        }
+      },
+      take: quantity
+    });
+  }
+
+  public async countAvailableAssetsForProduct(
+    productId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<number> {
+    const blockingStates = ['AWAITING_DEPOSIT', 'RESERVED', 'IN_PROGRESS', 'PENDING_INSPECTION'];
+    return this.prisma.asset.count({
+      where: {
+        productBaseId: productId,
+        state: 'AVAILABLE',
+        orders: {
+          none: {
+            order: {
+              state: { in: blockingStates as any },
+              AND: [
+                { pickUpDate: { lt: endDate } },
+                { returnDate: { gt: startDate } }
+              ]
+            }
+          }
+        }
+      }
+    });
+  }
 }

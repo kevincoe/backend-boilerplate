@@ -4,3 +4,4 @@ dist
 .clinerules
 logs/combined.log
 logs/error.log
+implementation_plan.md

@@ -1,5 +1,6 @@
 import { AppError } from '../errors/AppError';
 import { OrderState } from '../domain/OrderState';
+import { AssetState } from '../domain/AssetState';
 
 export interface OrderAssetData {
   assetId: string;
@@ -18,6 +19,7 @@ export interface OrderData {
 export interface IOrderRepository {
   findById(id: string): Promise<OrderData | null>;
   updateState(id: string, state: OrderState): Promise<OrderData>;
+  updateAssetStates(assetIds: string[], state: AssetState): Promise<void>;
   // Repare no excludeOrderId: ignoramos o próprio pedido para não dar falso positivo
   checkAssetsAvailability(assetIds: string[], startDate: Date, endDate: Date, excludeOrderId?: string): Promise<string[]>;
 }
@@ -57,10 +59,18 @@ export class ConfirmOrderService {
     );
 
     if (unavailableAssetIds.length > 0) {
-      throw new AppError('Race condition detected: Some assets are no longer available for these dates.', 409);
+      throw new AppError('Conflito de reserva detectado: Alguns equipamentos não estão mais disponíveis para as datas selecionadas.', 409);
     }
 
     // Se tudo estiver ok, alteramos o status para RESERVADO (Efetiva a trava da agenda)
-    return this.orderRepository.updateState(order.id, OrderState.RESERVED);
+    const updatedOrder = await this.orderRepository.updateState(order.id, OrderState.RESERVED);
+
+    // E retiramos os itens do estoque disponível
+    const assetIds = order.assets.map((a: OrderAssetData) => a.assetId);
+    if (assetIds.length > 0) {
+      await this.orderRepository.updateAssetStates(assetIds, AssetState.RENTED);
+    }
+
+    return updatedOrder;
   }
 }

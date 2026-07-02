@@ -1,9 +1,22 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { ProductCategory } from '@prisma/client';
+import { SearchProductsService } from '../services/SearchProductsService';
+import { CreateProductService } from '../services/CreateProductService';
+import { UpdateProductService } from '../services/UpdateProductService';
+import { UpdateProductStockService } from '../services/UpdateProductStockService';
+import { DeleteProductService } from '../services/DeleteProductService';
 
 export class ProductController {
+  constructor(
+    private readonly searchService: SearchProductsService,
+    private readonly createService: CreateProductService,
+    private readonly updateService: UpdateProductService,
+    private readonly updateStockService: UpdateProductStockService,
+    private readonly deleteService: DeleteProductService
+  ) {}
+
   public async index(req: Request, res: Response): Promise<Response> {
-    // 1. Validação dos Query Params
     const querySchema = z.object({
       page: z.coerce.number().int().positive().default(1),
       limit: z.coerce.number().int().positive().default(10),
@@ -11,36 +24,93 @@ export class ProductController {
       search: z.string().optional(),
     });
 
-    const { page, limit } = querySchema.parse(req.query);
+    try {
+      const query = querySchema.parse(req.query);
+      const result = await this.searchService.execute(query);
+      return res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error('Erro ao buscar produtos:', error);
+      return res.status(500).json({ error: 'Erro interno ao buscar produtos' });
+    }
+  }
 
-    // 2. Mock de dados (Substituir pela chamada ao Service futuramente)
-    const mockProducts = [
-      {
-        id: '550e8400-e29b-41d4-a716-446655440000',
-        name: 'Sony Alpha a7 III',
-        description: 'Câmera Mirrorless Full-Frame de alto desempenho para vídeo e foto.',
-        pricePerDay: 150,
-        imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32',
-        isAvailable: true,
-        category: 'camera',
-      },
-      {
-        id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-        name: 'Lens 24-70mm f/2.8',
-        description: 'Lente zoom versátil G Master, ideal para eventos e retratos.',
-        pricePerDay: 100,
-        imageUrl: 'https://images.unsplash.com/photo-1617005082133-548c4ea2e935',
-        isAvailable: true,
-        category: 'lens',
-      },
-    ];
-
-    // 3. Resposta padronizada para paginação
-    return res.json({
-      data: mockProducts,
-      total: mockProducts.length,
-      page,
-      limit,
+  public async create(req: Request, res: Response): Promise<Response> {
+    const bodySchema = z.object({
+      name: z.string().min(3),
+      description: z.string().optional(),
+      category: z.nativeEnum(ProductCategory),
+      pricePerDay: z.number().positive(),
+      stock: z.number().int().min(0),
+      imageUrl: z.string().optional(),
     });
+
+    try {
+      const data = bodySchema.parse(req.body);
+      const product = await this.createService.execute(data);
+      return res.status(201).json(product);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({ message: error.message || 'Erro interno ao criar produto' });
+    }
+  }
+
+  public async update(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    const bodySchema = z.object({
+      name: z.string().min(3).optional(),
+      description: z.string().optional(),
+      category: z.nativeEnum(ProductCategory).optional(),
+      pricePerDay: z.number().positive().optional(),
+      imageUrl: z.string().optional(),
+    });
+
+    try {
+      const data = bodySchema.parse(req.body);
+      const product = await this.updateService.execute({ id, ...data });
+      return res.json(product);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({ message: error.message || 'Erro interno ao atualizar produto' });
+    }
+  }
+
+  public async updateStock(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    const bodySchema = z.object({
+      newStockQuantity: z.number().int().min(0),
+    });
+
+    try {
+      const { newStockQuantity } = bodySchema.parse(req.body);
+      const product = await this.updateStockService.execute({ id, newStockQuantity });
+      return res.json(product);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({ message: error.message || 'Erro interno ao atualizar estoque' });
+    }
+  }
+
+  public async delete(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    
+    try {
+      await this.deleteService.execute(id);
+      return res.status(204).send();
+    } catch (error: any) {
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({ message: error.message || 'Erro interno ao excluir produto' });
+    }
   }
 }

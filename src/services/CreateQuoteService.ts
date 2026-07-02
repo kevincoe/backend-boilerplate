@@ -15,41 +15,84 @@ export interface IOrderRepository {
   checkAssetsAvailability(assetIds: string[], startDate: Date, endDate: Date): Promise<string[]>;
 }
 
+export interface ICustomerRepository {
+  upsertCustomer(data: { name: string; email: string; phone: string; document: string }): Promise<{ id: string }>;
+}
+
 export interface IAssetRepository {
   findAssetsByIds(assetIds: string[]): Promise<AssetData[]>;
+  countAvailableAssetsForProduct(productId: string, startDate: Date, endDate: Date): Promise<number>;
+  findAvailableAssetsForProduct(
+    productId: string,
+    quantity: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<(AssetData & { product: { dailyPrice: any } })[]>;
+}
+
+export interface IProductRepository {
+  findById(id: string): Promise<{ name: string } | null>;
 }
 
 export class CreateQuoteService {
   constructor(
     private readonly orderRepository: IOrderRepository,
-    private readonly assetRepository: IAssetRepository
+    private readonly assetRepository: IAssetRepository,
+    private readonly customerRepository: ICustomerRepository,
+    private readonly productRepository: IProductRepository
   ) {}
 
-  public async execute(data: { customerId: string; assetIds: string[]; pickUpDate: string; returnDate: string }) {
-    const requestedAssets = await this.assetRepository.findAssetsByIds(data.assetIds);
-    
-    if (requestedAssets.length !== data.assetIds.length) {
-      throw new AppError('One or more assets do not exist.', 404);
-    }
-
+  public async execute(data: { customer: { name: string; email: string; phone: string; document: string }; items: { productId: string, quantity: number }[]; pickUpDate: string; returnDate: string }) {
     // Rule: +1 day buffer for cleaning
     const pickUpDate = new Date(data.pickUpDate);
     const returnDateWithBuffer = new Date(data.returnDate);
     returnDateWithBuffer.setDate(returnDateWithBuffer.getDate() + 1);
 
-    // Checks if any asset is booked in another order overlapping this period
-    const unavailableAssetIds = await this.orderRepository.checkAssetsAvailability(
-      data.assetIds,
-      pickUpDate,
-      returnDateWithBuffer
-    );
+    const assetIdsToRent: string[] = [];
+    let totalAmount = 0;
+    
+    // Calculate total days (minimum 1)
+    const timeDiff = Math.max(returnDateWithBuffer.getTime() - pickUpDate.getTime(), 0);
+    const days = Math.ceil(timeDiff / (1000 * 3600 * 24)) || 1;
 
-    if (unavailableAssetIds.length > 0) {
-      throw new AppError(`Assets ${unavailableAssetIds.join(', ')} are not available for the requested period.`, 409);
+    for (const item of data.items) {
+      const product = await this.productRepository.findById(item.productId);
+      if (!product) {
+        throw new AppError(`Product ${item.productId} not found.`, 404);
+      }
+
+      const availableCount = await this.assetRepository.countAvailableAssetsForProduct(
+        item.productId,
+        pickUpDate,
+        returnDateWithBuffer
+      );
+
+      if (availableCount < item.quantity) {
+        throw new AppError(`Estoque insuficiente para o produto "${product.name}". Quantidade solicitada: ${item.quantity}, Disponível: ${availableCount}.`, 409);
+      }
+
+      const availableAssets = await this.assetRepository.findAvailableAssetsForProduct(
+        item.productId,
+        item.quantity,
+        pickUpDate,
+        returnDateWithBuffer
+      );
+      
+      for (const asset of availableAssets) {
+        assetIdsToRent.push(asset.id);
+        totalAmount += Number(asset.product.dailyPrice) * days;
+      }
     }
 
-    // Since it's a quote, it doesn't block the physical asset status yet, it just creates a Draft Order
-    // We'd calculate prices here based on the assets requested.
-    return this.orderRepository.create({ ...data, state: OrderState.DRAFT });
+    const customer = await this.customerRepository.upsertCustomer(data.customer);
+
+    return this.orderRepository.create({ 
+      customerId: customer.id,
+      pickUpDate: data.pickUpDate,
+      returnDate: data.returnDate,
+      assetIds: assetIdsToRent,
+      totalAmount,
+      state: OrderState.DRAFT 
+    });
   }
 }

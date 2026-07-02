@@ -25,13 +25,22 @@ enum AssetState {
   TOTAL_LOSS
 }
 
+enum ProductCategory {
+  MOVEIS
+  DECORACAO
+  LOUÇAS
+  TECIDOS
+  ELETRONICOS
+  GERAL
+}
+
 model Customer {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
   phone     String
   document  String   @unique // CPF/CNPJ
-  score     Int      @default(100) // Score de confiabilidade
+  score     Int      @default(10) // Score de confiabilidade
   orders    Order[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -42,6 +51,8 @@ model ProductBase {
   name        String
   description String?
   dailyPrice  Decimal  @db.Decimal(10, 2)
+  category    ProductCategory @default(GERAL)
+  imageUrl    String?
   assets      Asset[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

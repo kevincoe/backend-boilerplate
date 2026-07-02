@@ -1,5 +1,6 @@
 import { PrismaClient, Order, OrderAsset } from '@prisma/client';
 import { OrderState } from '../domain/OrderState';
+import { AssetState } from '../domain/AssetState';
 
 export type OrderWithAssets = Order & { assets: OrderAsset[] };
 
@@ -9,6 +10,7 @@ export interface CreateOrderDTO {
   returnDate: Date | string;
   state: OrderState;
   assetIds: string[];
+  totalAmount: number;
 }
 
 export class OrderRepository {
@@ -21,7 +23,7 @@ export class OrderRepository {
         pickUpDate: new Date(data.pickUpDate),
         returnDate: new Date(data.returnDate),
         state: data.state,
-        totalAmount: 0, // TODO: Calcular dinamicamente baseado na soma de dailyPrice
+        totalAmount: data.totalAmount,
         assets: {
           create: data.assetIds.map((id: string) => ({
             asset: { connect: { id } }
@@ -35,13 +37,49 @@ export class OrderRepository {
   public async findById(id: string): Promise<OrderWithAssets | null> {
     return this.prisma.order.findUnique({
       where: { id },
-      include: { assets: true }
+      include: {
+        customer: true,
+        assets: {
+          include: {
+            asset: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  public async findAll(): Promise<Order[]> {
+    return this.prisma.order.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        customer: true,
+        assets: {
+          include: {
+            asset: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }
+      }
     });
   }
 
   public async updateState(id: string, state: OrderState): Promise<Order> {
     return this.prisma.order.update({
       where: { id },
+      data: { state }
+    });
+  }
+
+  public async updateAssetStates(assetIds: string[], state: AssetState): Promise<void> {
+    await this.prisma.asset.updateMany({
+      where: { id: { in: assetIds } },
       data: { state }
     });
   }
@@ -77,5 +115,22 @@ export class OrderRepository {
     }
 
     return Array.from(unavailableAssets);
+  }
+
+  public async update(id: string, data: { pickUpDate?: Date; returnDate?: Date; totalAmount?: number }): Promise<Order> {
+    return this.prisma.order.update({
+      where: { id },
+      data,
+    });
+  }
+
+  public async delete(id: string): Promise<void> {
+    await this.prisma.orderAsset.deleteMany({
+      where: { orderId: id },
+    });
+    
+    await this.prisma.order.delete({
+      where: { id },
+    });
   }
 }
