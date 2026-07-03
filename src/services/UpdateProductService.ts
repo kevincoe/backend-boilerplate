@@ -14,20 +14,22 @@ interface UpdateProductRequest {
 export class UpdateProductService {
   constructor(private readonly productRepository: ProductRepository) {}
 
-  public async execute({ id, ...data }: UpdateProductRequest) {
+  public async execute({ id, pricePerDay, ...data }: UpdateProductRequest) {
     const productExists = await this.productRepository.findById(id);
     if (!productExists) {
       throw new AppError("Produto não encontrado.", 404);
     }
 
-    if (data.pricePerDay !== undefined && data.pricePerDay <= 0) {
+    if (pricePerDay !== undefined && pricePerDay <= 0) {
       throw new AppError("O preço por dia deve ser maior que zero.", 400);
     }
 
-    const updatedProduct = await this.productRepository.update(id, {
+    const updateData = {
       ...data,
-      dailyPrice: data.pricePerDay,
-    });
+      ...(pricePerDay !== undefined && { dailyPrice: pricePerDay }),
+    };
+
+    const updatedProduct = await this.productRepository.update(id, updateData);
 
     const totalStock = updatedProduct.assets.length;
     const availableStock = updatedProduct.assets.filter(
