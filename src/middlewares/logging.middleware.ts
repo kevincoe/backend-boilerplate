@@ -1,32 +1,32 @@
 import { Request, Response, NextFunction } from "express";
 import winston from "winston";
 
-// Create a Winston logger instance
-const logger = winston.createLogger({
-  level: "info",
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json(),
-  ),
-  defaultMeta: { service: "backend-boilerplate" },
-  transports: [
-    // Write all logs with importance level of info or less to `combined.log`
-    new winston.transports.File({ filename: "logs/combined.log" }),
+const isProduction = process.env.NODE_ENV === "production";
 
-    // Write all logs with importance level of error or less to `error.log`
-    new winston.transports.File({ filename: "logs/error.log", level: "error" }),
-  ],
+// Define o formato do log com base no ambiente
+const logFormat = winston.format.combine(
+  winston.format.timestamp(),
+  winston.format.errors({ stack: true }),
+  winston.format.json(),
+);
+
+const consoleTransport = new winston.transports.Console({
+  format: isProduction
+    ? logFormat
+    : winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple(),
+      ),
 });
 
-// If we're not in production, also log to the console
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.simple(),
-    }),
-  );
-}
+const logger = winston.createLogger({
+  level: isProduction ? "info" : "debug",
+  format: logFormat,
+  defaultMeta: { service: "backend-boilerplate" },
+  transports: [
+    consoleTransport,
+  ],
+});
 
 export function requestLogger(
   req: Request,
