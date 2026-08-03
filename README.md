@@ -7,7 +7,7 @@ Este é o backend do sistema CRM de Locação de Equipamentos "Pegue-e-Monte", c
 - **Runtime:** Node.js
 - **Framework HTTP:** Express
 - **Linguagem:** TypeScript
-- **Banco de Dados:** SQLite (via Prisma ORM)
+- **Banco de Dados:** PostgreSQL (via Supabase & Prisma ORM)
 - **Validação:** Zod
 - **Build/Dev:** `tsx` & `tsup`
 - **Qualidade:** ESLint, Prettier & Vitest
@@ -29,11 +29,11 @@ npm install
 Crie um arquivo `.env` na raiz do projeto (se não existir):
 ```env
 PORT=3333
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
 ```
 
 ### 4. Preparar o Banco de Dados (Prisma)
-Gere o Client do Prisma e rode as migrations para criar as tabelas no SQLite:
+Gere o Client do Prisma e rode as migrations para criar as tabelas no PostgreSQL (Supabase):
 ```bash
 npx prisma generate
 npx prisma db push
