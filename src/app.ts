@@ -1,45 +1,44 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
+import { errorHandler } from './middlewares/errorHandler.middleware';
+import { orderRoutes } from './routes/order.routes';
+import { productRoutes } from './routes/product.routes';
+import { dashboardRoutes } from './routes/dashboard.routes';
+import { kitRoutes } from './routes/kit.routes';
+import { requestLogger } from './middlewares/logging.middleware';
 
 const app: Application = express();
+
+// Confiar no Proxy reverso (Render / Cloudflare) para que o express-rate-limit consiga capturar o IP real (x-forwarded-for)
+app.set('trust proxy', 1);
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  limit: 100, // Limite de 100 requests por IP a cada 15 min
+  message: 'Muitas requisições deste IP, tente novamente mais tarde.'
+});
 
 // Middlewares Globais
 app.use(helmet()); // Segurança
 app.use(cors()); // Permite acesso do frontend
 app.use(express.json()); // Parse de JSON no body
-
-// Exemplo de Rota com validação Zod
-app.post('/api/users', (req: Request, res: Response) => {
-  // Define o schema do que esperamos receber
-  const userSchema = z.object({
-    name: z.string().min(3, "O nome deve ter no mínimo 3 caracteres"),
-    email: z.string().email("Email inválido"),
-    age: z.number().int().positive().optional(),
-  });
-
-  try {
-    // Valida o body da requisição
-    const validatedData = userSchema.parse(req.body);
-    
-    // Se passou, prossegue com a lógica (ex: salvar no banco)
-    res.status(201).json({
-      message: 'Usuário criado com sucesso!',
-      data: validatedData,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ errors: error.issues });
-    } else {
-      res.status(500).json({ error: 'Erro interno do servidor' });
-    }
-  }
-});
+app.use(requestLogger); // Logging middleware
+app.use(limiter); // Rate Limiting contra força bruta
 
 // Rota de Healthcheck
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', uptime: process.uptime() });
 });
+
+// Add your other routes here...
+app.use('/api/orders', orderRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/kits', kitRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+// Global Error Handler MUST be the last middleware
+app.use(errorHandler);
 
 export default app;

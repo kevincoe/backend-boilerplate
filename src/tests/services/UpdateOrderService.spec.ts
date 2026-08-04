@@ -1,0 +1,95 @@
+import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
+import { UpdateOrderService } from "../../services/UpdateOrderService";
+import { AppError } from "../../errors/AppError";
+import { OrderState } from "../../domain/OrderState";
+
+describe("UpdateOrderService", () => {
+  let orderRepositoryMock: Record<string, Mock>;
+  let updateOrderService: UpdateOrderService;
+
+  beforeEach(() => {
+    orderRepositoryMock = {
+      findById: vi.fn(),
+      update: vi.fn(),
+      checkAssetsAvailability: vi.fn(),
+    };
+
+    updateOrderService = new UpdateOrderService(orderRepositoryMock as unknown as import("../../repositories/OrderRepository").OrderRepository);
+  });
+
+  const mockOrder = {
+    id: "order-1",
+    state: OrderState.DRAFT,
+    pickUpDate: new Date("2026-08-01"),
+    returnDate: new Date("2026-08-05"),
+    assets: [{ assetId: "asset-1" }],
+  };
+
+  it("should throw an error if order is not found", async () => {
+    (orderRepositoryMock.findById as Mock).mockResolvedValue(null);
+
+    await expect(updateOrderService.execute({ id: "invalid" })).rejects.toThrow(
+      new AppError("Pedido não encontrado.", 404)
+    );
+  });
+
+  it("should throw an error if order is completed or canceled", async () => {
+    (orderRepositoryMock.findById as Mock).mockResolvedValue({
+      ...mockOrder,
+      state: OrderState.COMPLETED,
+    });
+
+    await expect(updateOrderService.execute({ id: "order-1" })).rejects.toThrow(
+      new AppError("Não é possível editar um pedido já finalizado.", 400)
+    );
+  });
+
+  it("should throw an error if pickup date is after return date", async () => {
+    (orderRepositoryMock.findById as Mock).mockResolvedValue(mockOrder);
+
+    await expect(
+      updateOrderService.execute({
+        id: "order-1",
+        pickUpDate: "2026-08-10",
+        returnDate: "2026-08-05", // pickup > return
+      })
+    ).rejects.toThrow(new AppError("A data de devolução deve ser posterior à data de retirada.", 400));
+  });
+
+  it("should check assets availability if order is NOT DRAFT and dates changed", async () => {
+    const activeOrder = { ...mockOrder, state: OrderState.RESERVED };
+    (orderRepositoryMock.findById as Mock).mockResolvedValue(activeOrder);
+    (orderRepositoryMock.checkAssetsAvailability as Mock).mockResolvedValue(["asset-1"]); // Conflict!
+
+    await expect(
+      updateOrderService.execute({
+        id: "order-1",
+        returnDate: "2026-08-10", // extending the date
+      })
+    ).rejects.toThrow(
+      new AppError(
+        "Conflito de reserva detectado: As novas datas colidem com locações existentes para os equipamentos deste pedido.",
+        409
+      )
+    );
+  });
+
+  it("should update order successfully", async () => {
+    (orderRepositoryMock.findById as Mock).mockResolvedValue(mockOrder);
+    const updatedOrder = { ...mockOrder, totalAmount: 500 };
+    (orderRepositoryMock.update as Mock).mockResolvedValue(updatedOrder);
+
+    const result = await updateOrderService.execute({
+      id: "order-1",
+      totalAmount: 500,
+    });
+
+    expect(orderRepositoryMock.update).toHaveBeenCalledWith("order-1", {
+      pickUpDate: mockOrder.pickUpDate,
+      returnDate: mockOrder.returnDate,
+      totalAmount: 500,
+    });
+
+    expect(result).toEqual(updatedOrder);
+  });
+});
