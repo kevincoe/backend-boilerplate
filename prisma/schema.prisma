@@ -47,15 +47,16 @@ model Customer {
 }
 
 model ProductBase {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String
   description String?
-  dailyPrice  Decimal  @db.Decimal(10, 2)
+  dailyPrice  Decimal         @db.Decimal(10, 2)
   category    ProductCategory @default(GERAL)
   imageUrl    String?
   assets      Asset[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  kitItems    KitItem[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
 
 model Asset {
@@ -76,6 +77,7 @@ model Order {
   customer    Customer     @relation(fields: [customerId], references: [id])
   state       OrderState   @default(DRAFT)
   totalAmount Decimal      @db.Decimal(10, 2)
+  amountPaid  Decimal      @default(0.00) @db.Decimal(10, 2)
   pickUpDate  DateTime
   returnDate  DateTime
   assets      OrderAsset[]
@@ -102,4 +104,24 @@ model MaintenanceLog {
   resolved    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Kit {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal   @db.Decimal(10, 2) // Preço promocional do kit
+  isFavorited Boolean   @default(false)
+  items       KitItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model KitItem {
+  id            String      @id @default(uuid())
+  kitId         String
+  kit           Kit         @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  productBaseId String
+  productBase   ProductBase @relation(fields: [productBaseId], references: [id])
+  quantity      Int         @default(1)
 }

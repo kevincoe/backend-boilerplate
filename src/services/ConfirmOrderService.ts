@@ -18,7 +18,7 @@ export interface OrderData {
 // Atualizando a interface do Repository (seria o nosso port para o Prisma)
 export interface IOrderRepository {
   findById(id: string): Promise<OrderData | null>;
-  updateState(id: string, state: OrderState): Promise<OrderData>;
+  updateState(id: string, state: OrderState, amountPaid?: number): Promise<OrderData>;
   updateAssetStates(assetIds: string[], state: AssetState): Promise<void>;
   // Repare no excludeOrderId: ignoramos o próprio pedido para não dar falso positivo
   checkAssetsAvailability(
@@ -50,11 +50,11 @@ export class ConfirmOrderService {
       throw new AppError("Order cannot be confirmed in its current state", 400);
     }
 
-    // Regra: Exigir no mínimo 30% de sinal
-    const minDeposit = Number(order.totalAmount) * 0.3;
+    // Regra: Exigir no mínimo 50% de sinal
+    const minDeposit = Number(order.totalAmount) * 0.5;
     if (paymentAmount < minDeposit) {
       throw new AppError(
-        `Deposit amount must be at least 30% (${minDeposit})`,
+        `Deposit amount must be at least 50% (${minDeposit})`,
         400,
       );
     }
@@ -84,6 +84,7 @@ export class ConfirmOrderService {
     const updatedOrder = await this.orderRepository.updateState(
       order.id,
       OrderState.RESERVED,
+      paymentAmount // Salvando o sinal recebido
     );
 
     // E retiramos os itens do estoque disponível

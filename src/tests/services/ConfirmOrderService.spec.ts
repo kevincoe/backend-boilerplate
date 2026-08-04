@@ -49,12 +49,12 @@ describe("ConfirmOrderService", () => {
     );
   });
 
-  it("should throw an error if payment amount is less than 30%", async () => {
+  it("should throw an error if payment amount is less than 50%", async () => {
     (orderRepositoryMock.findById as Mock).mockResolvedValue(mockOrder);
 
-    // 30% de 1000 = 300. Mandando 299 deve falhar
-    await expect(confirmOrderService.execute("order-123", 299)).rejects.toThrow(
-      new AppError("Deposit amount must be at least 30% (300)", 400)
+    // 50% de 1000 = 500. Mandando 499 deve falhar
+    await expect(confirmOrderService.execute("order-123", 499)).rejects.toThrow(
+      new AppError("Deposit amount must be at least 50% (500)", 400)
     );
   });
 
@@ -64,7 +64,7 @@ describe("ConfirmOrderService", () => {
       "asset-2",
     ]);
 
-    await expect(confirmOrderService.execute("order-123", 300)).rejects.toThrow(
+    await expect(confirmOrderService.execute("order-123", 500)).rejects.toThrow(
       new AppError(
         "Conflito de reserva detectado: Alguns equipamentos não estão mais disponíveis para as datas selecionadas.",
         409
@@ -89,7 +89,8 @@ describe("ConfirmOrderService", () => {
 
     expect(orderRepositoryMock.updateState).toHaveBeenCalledWith(
       "order-123",
-      OrderState.RESERVED
+      OrderState.RESERVED,
+      500
     );
 
     expect(orderRepositoryMock.updateAssetStates).toHaveBeenCalledWith(

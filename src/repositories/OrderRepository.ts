@@ -70,10 +70,13 @@ export class OrderRepository {
     });
   }
 
-  public async updateState(id: string, state: OrderState): Promise<Order> {
+  public async updateState(id: string, state: OrderState, amountPaid?: number): Promise<Order> {
     return this.prisma.order.update({
       where: { id },
-      data: { state },
+      data: { 
+        state,
+        ...(amountPaid !== undefined && { amountPaid })
+      },
     });
   }
 
