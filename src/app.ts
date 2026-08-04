@@ -11,6 +11,9 @@ import { requestLogger } from './middlewares/logging.middleware';
 
 const app: Application = express();
 
+// Confiar no Proxy reverso (Render / Cloudflare) para que o express-rate-limit consiga capturar o IP real (x-forwarded-for)
+app.set('trust proxy', 1);
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   limit: 100, // Limite de 100 requests por IP a cada 15 min
