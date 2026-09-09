@@ -2,9 +2,9 @@ name: "CodeQL Advanced"
 
 on:
   push:
-    branches: [ "main", "feat/crm-pem" ]
+    branches: [ "main", "feat/crm-pem", "feat/crm-360-agentic" ]
   pull_request:
-    branches: [ "main", "feat/crm-pem" ]
+    branches: [ "main", "feat/crm-pem", "feat/crm-360-agentic" ]
   schedule:
     - cron: '30 2 * * 4'
 
