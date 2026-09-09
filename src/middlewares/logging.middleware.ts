@@ -35,13 +35,18 @@ export function requestLogger(
 ): void {
   const startTime = Date.now();
 
+  const sanitizedHeaders = { ...req.headers };
+  delete sanitizedHeaders.authorization;
+  delete sanitizedHeaders.cookie;
+  delete sanitizedHeaders["x-api-key"];
+
   // Log the request
   logger.info("Request started", {
     method: req.method,
     url: req.url,
     ip: req.ip,
     userAgent: req.get("User-Agent"),
-    headers: req.headers,
+    headers: sanitizedHeaders,
   });
 
   // Log response

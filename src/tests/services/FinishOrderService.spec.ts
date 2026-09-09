@@ -5,7 +5,11 @@ import { OrderState } from "../../domain/OrderState";
 import { AssetState } from "../../domain/AssetState";
 
 describe("FinishOrderService", () => {
-  let orderRepositoryMock: ReturnType<typeof vi.fn>;
+  let orderRepositoryMock: {
+    findById: Mock;
+    updateState: Mock;
+    updateAssetStates: Mock;
+  };
   let finishOrderService: FinishOrderService;
 
   beforeEach(() => {
@@ -13,7 +17,7 @@ describe("FinishOrderService", () => {
       findById: vi.fn(),
       updateState: vi.fn(),
       updateAssetStates: vi.fn(),
-    } as unknown as ReturnType<typeof vi.fn>;
+    };
 
     finishOrderService = new FinishOrderService(
       orderRepositoryMock as unknown as IOrderRepository

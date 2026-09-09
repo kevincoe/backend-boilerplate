@@ -1,13 +1,16 @@
-import { OrderData } from "./CreateQuoteService";
-
-export interface IListOrdersRepository {
-  findAll(): Promise<OrderData[]>;
-}
+import {
+  IOrderRepository,
+  FindAllOrdersParams,
+  PaginatedOrdersResult,
+} from "../repositories/contracts/IOrderRepository";
+import { Order } from "@prisma/client";
 
 export class ListOrdersService {
-  constructor(private readonly orderRepository: IListOrdersRepository) {}
+  constructor(private readonly orderRepository: IOrderRepository) {}
 
-  public async execute() {
-    return this.orderRepository.findAll();
+  public async execute(
+    params?: FindAllOrdersParams,
+  ): Promise<PaginatedOrdersResult | Order[]> {
+    return this.orderRepository.findAll(params);
   }
 }

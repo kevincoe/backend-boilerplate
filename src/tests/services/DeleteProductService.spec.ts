@@ -9,6 +9,7 @@ describe("DeleteProductService", () => {
 
   beforeEach(() => {
     productRepositoryMock = {
+      findByIdWithAssets: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     };
@@ -19,38 +20,43 @@ describe("DeleteProductService", () => {
   });
 
   it("should throw an error if product is not found", async () => {
+    (productRepositoryMock.findByIdWithAssets as Mock).mockResolvedValue(null);
     (productRepositoryMock.update as Mock).mockResolvedValue(null);
 
     await expect(deleteProductService.execute("invalid-id")).rejects.toThrow(
-      new AppError("Produto não encontrado.", 404)
+      new AppError("Product not found.", 404)
     );
   });
 
   it("should throw an error if product has rented or reserved assets", async () => {
-    (productRepositoryMock.update as Mock).mockResolvedValue({
+    const mockData = {
       id: "prod-1",
       assets: [
         { id: "asset-1", state: "AVAILABLE" },
         { id: "asset-2", state: "RENTED" },
       ],
-    });
+    };
+    (productRepositoryMock.findByIdWithAssets as Mock).mockResolvedValue(mockData);
+    (productRepositoryMock.update as Mock).mockResolvedValue(mockData);
 
     await expect(deleteProductService.execute("prod-1")).rejects.toThrow(
       new AppError(
-        "Não é possível excluir este produto pois existem equipamentos alugados ou reservados associados a ele. Remova-os do estoque disponível primeiro.",
+        "Cannot delete this product because there are rented or reserved assets associated with it. Remove them from available stock first.",
         400
       )
     );
   });
 
   it("should delete the product if all assets are AVAILABLE", async () => {
-    (productRepositoryMock.update as Mock).mockResolvedValue({
+    const mockData = {
       id: "prod-1",
       assets: [
         { id: "asset-1", state: "AVAILABLE" },
         { id: "asset-2", state: "AVAILABLE" },
       ],
-    });
+    };
+    (productRepositoryMock.findByIdWithAssets as Mock).mockResolvedValue(mockData);
+    (productRepositoryMock.update as Mock).mockResolvedValue(mockData);
 
     const result = await deleteProductService.execute("prod-1");
 
@@ -59,10 +65,12 @@ describe("DeleteProductService", () => {
   });
 
   it("should gracefully handle Prisma P2003 foreign key constraint errors", async () => {
-    (productRepositoryMock.update as Mock).mockResolvedValue({
+    const mockData = {
       id: "prod-1",
       assets: [{ id: "asset-1", state: "AVAILABLE" }],
-    });
+    };
+    (productRepositoryMock.findByIdWithAssets as Mock).mockResolvedValue(mockData);
+    (productRepositoryMock.update as Mock).mockResolvedValue(mockData);
 
     // Simulate a foreign key constraint failure
     const prismaError = new Prisma.PrismaClientKnownRequestError("Foreign key constraint failed", {
@@ -74,7 +82,7 @@ describe("DeleteProductService", () => {
 
     await expect(deleteProductService.execute("prod-1")).rejects.toThrow(
       new AppError(
-        "Não é possível excluir este produto pois ele possui histórico de locações em pedidos anteriores. Considere zerar o estoque dele em vez de excluí-lo.",
+        "Cannot delete this product because it has rental history in previous orders. Consider setting its stock to zero instead.",
         400
       )
     );

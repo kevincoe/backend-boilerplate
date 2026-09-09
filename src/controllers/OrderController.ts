@@ -1,12 +1,17 @@
 import { Request, Response, NextFunction } from "express";
-import { z } from "zod";
 import { CreateQuoteService } from "../services/CreateQuoteService";
 import { ConfirmOrderService } from "../services/ConfirmOrderService";
 import { FinishOrderService } from "../services/FinishOrderService";
 import { ListOrdersService } from "../services/ListOrdersService";
 import { UpdateOrderService } from "../services/UpdateOrderService";
 import { DeleteOrderService } from "../services/DeleteOrderService";
-import { createQuoteSchema, confirmOrderSchema } from "../schemas/order.schema";
+import {
+  createQuoteSchema,
+  confirmOrderSchema,
+  updateOrderSchema,
+} from "../schemas/order.schema";
+import { idParamSchema, orderIdParamSchema } from "../schemas/params.schema";
+import { paginationQuerySchema } from "../schemas/pagination.schema";
 
 export class OrderController {
   constructor(
@@ -25,7 +30,6 @@ export class OrderController {
   ): Promise<void> {
     try {
       const validatedData = createQuoteSchema.parse(req.body);
-
       const quote = await this.createQuoteService.execute(validatedData);
       res.status(201).json(quote);
     } catch (error) {
@@ -39,7 +43,7 @@ export class OrderController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const { orderId } = req.params;
+      const { orderId } = orderIdParamSchema.parse(req.params);
       const validatedData = confirmOrderSchema.parse(req.body);
 
       const order = await this.confirmOrderService.execute(
@@ -58,7 +62,7 @@ export class OrderController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const { id } = req.params;
+      const { id } = idParamSchema.parse(req.params);
       const order = await this.finishOrderService.execute(id);
       res.status(200).json(order);
     } catch (error) {
@@ -72,49 +76,41 @@ export class OrderController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const orders = await this.listOrdersService.execute();
+      const query = paginationQuerySchema.safeParse(req.query);
+      const params = query.success ? query.data : undefined;
+      const orders = await this.listOrdersService.execute(params);
       res.status(200).json(orders);
     } catch (error) {
       next(error);
     }
   }
 
-  public async update(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params;
-    const bodySchema = z.object({
-      pickUpDate: z.string().datetime().optional(),
-      returnDate: z.string().datetime().optional(),
-      totalAmount: z.number().positive().optional(),
-    });
-
+  public async update(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const data = bodySchema.parse(req.body);
+      const { id } = idParamSchema.parse(req.params);
+      const data = updateOrderSchema.parse(req.body);
       const order = await this.updateOrderService.execute({ id, ...data });
-      return res.json(order);
-    } catch (error: unknown) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      const err = error as { statusCode?: number; message?: string };
-      const statusCode = err.statusCode || 500;
-      return res
-        .status(statusCode)
-        .json({ message: err.message || "Erro interno ao atualizar pedido" });
+      res.status(200).json(order);
+    } catch (error) {
+      next(error);
     }
   }
 
-  public async delete(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params;
-
+  public async delete(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
+      const { id } = idParamSchema.parse(req.params);
       await this.deleteOrderService.execute(id);
-      return res.status(204).send();
-    } catch (error: unknown) {
-      const err = error as { statusCode?: number; message?: string };
-      const statusCode = err.statusCode || 500;
-      return res
-        .status(statusCode)
-        .json({ message: err.message || "Erro interno ao excluir pedido" });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
     }
   }
 }

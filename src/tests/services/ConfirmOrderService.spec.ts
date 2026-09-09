@@ -5,7 +5,12 @@ import { OrderState } from "../../domain/OrderState";
 import { AssetState } from "../../domain/AssetState";
 
 describe("ConfirmOrderService", () => {
-  let orderRepositoryMock: ReturnType<typeof vi.fn>;
+  let orderRepositoryMock: {
+    findById: Mock;
+    updateState: Mock;
+    updateAssetStates: Mock;
+    checkAssetsAvailability: Mock;
+  };
   let confirmOrderService: ConfirmOrderService;
 
   beforeEach(() => {
@@ -14,7 +19,7 @@ describe("ConfirmOrderService", () => {
       updateState: vi.fn(),
       updateAssetStates: vi.fn(),
       checkAssetsAvailability: vi.fn(),
-    } as unknown as ReturnType<typeof vi.fn>;
+    };
 
     confirmOrderService = new ConfirmOrderService(
       orderRepositoryMock as unknown as IOrderRepository
@@ -66,7 +71,7 @@ describe("ConfirmOrderService", () => {
 
     await expect(confirmOrderService.execute("order-123", 500)).rejects.toThrow(
       new AppError(
-        "Conflito de reserva detectado: Alguns equipamentos não estão mais disponíveis para as datas selecionadas.",
+        "Reservation conflict detected: Some equipment is no longer available for the selected dates.",
         409
       )
     );

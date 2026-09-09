@@ -1,8 +1,8 @@
-import { OrderRepository } from "../repositories/OrderRepository";
+import { IOrderRepository } from "../repositories/contracts/IOrderRepository";
 import { AppError } from "../errors/AppError";
 import { OrderState } from "../domain/OrderState";
 
-interface UpdateOrderRequest {
+export interface UpdateOrderRequest {
   id: string;
   pickUpDate?: string;
   returnDate?: string;
@@ -10,7 +10,7 @@ interface UpdateOrderRequest {
 }
 
 export class UpdateOrderService {
-  constructor(private readonly orderRepository: OrderRepository) {}
+  constructor(private readonly orderRepository: IOrderRepository) {}
 
   public async execute({
     id,
@@ -21,15 +21,14 @@ export class UpdateOrderService {
     const order = await this.orderRepository.findById(id);
 
     if (!order) {
-      throw new AppError("Pedido não encontrado.", 404);
+      throw new AppError("Order not found.", 404);
     }
 
     if (
       order.state === OrderState.COMPLETED ||
-      order.state === OrderState.COMPLETED_WITH_DAMAGES ||
-      order.state === OrderState.TOTAL_LOSS
+      order.state === OrderState.COMPLETED_WITH_DAMAGES
     ) {
-      throw new AppError("Não é possível editar um pedido já finalizado.", 400);
+      throw new AppError("Cannot edit an order that has already been finished.", 400);
     }
 
     let newPickUpDate = order.pickUpDate;
@@ -40,12 +39,12 @@ export class UpdateOrderService {
 
     if (newPickUpDate >= newReturnDate) {
       throw new AppError(
-        "A data de devolução deve ser posterior à data de retirada.",
+        "Return date must be after pick-up date.",
         400,
       );
     }
 
-    // Se as datas mudaram e o pedido não é DRAFT, precisamos checar a disponibilidade dos ativos
+    // If dates changed and order is not DRAFT, check asset availability
     if (order.state !== OrderState.DRAFT && (pickUpDate || returnDate)) {
       const assetIds = order.assets.map((oa) => oa.assetId);
       const unavailableAssets =
@@ -58,7 +57,7 @@ export class UpdateOrderService {
 
       if (unavailableAssets.length > 0) {
         throw new AppError(
-          "Conflito de reserva detectado: As novas datas colidem com locações existentes para os equipamentos deste pedido.",
+          "Reservation conflict detected: The new dates conflict with existing rentals for the equipment in this order.",
           409,
         );
       }

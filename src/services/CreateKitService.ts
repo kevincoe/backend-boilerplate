@@ -1,9 +1,12 @@
-import { KitRepository, CreateKitDTO } from "../repositories/KitRepository";
-import { KitWithItems } from "../repositories/KitRepository";
+import {
+  IKitRepository,
+  CreateKitDTO,
+  KitWithItems,
+} from "../repositories/contracts/IKitRepository";
 import { AppError } from "../errors/AppError";
 
 export class CreateKitService {
-  constructor(private readonly kitRepository: KitRepository) {}
+  constructor(private readonly kitRepository: IKitRepository) {}
 
   public async execute(data: CreateKitDTO): Promise<KitWithItems> {
     if (!data.name) {

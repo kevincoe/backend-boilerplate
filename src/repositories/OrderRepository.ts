@@ -1,19 +1,17 @@
 import { PrismaClient, Order, OrderAsset } from "@prisma/client";
 import { OrderState } from "../domain/OrderState";
 import { AssetState } from "../domain/AssetState";
+import {
+  IOrderRepository,
+  OrderWithAssets,
+  CreateOrderDTO,
+  FindAllOrdersParams,
+  PaginatedOrdersResult,
+} from "./contracts/IOrderRepository";
 
-export type OrderWithAssets = Order & { assets: OrderAsset[] };
+export { OrderWithAssets, CreateOrderDTO, FindAllOrdersParams, PaginatedOrdersResult };
 
-export interface CreateOrderDTO {
-  customerId: string;
-  pickUpDate: Date | string;
-  returnDate: Date | string;
-  state: OrderState;
-  assetIds: string[];
-  totalAmount: number;
-}
-
-export class OrderRepository {
+export class OrderRepository implements IOrderRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async create(data: CreateOrderDTO): Promise<OrderWithAssets> {
@@ -52,31 +50,67 @@ export class OrderRepository {
     });
   }
 
-  public async findAll(): Promise<Order[]> {
-    return this.prisma.order.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        customer: true,
-        assets: {
-          include: {
-            asset: {
-              include: {
-                product: true,
+  public async findAll(
+    params?: FindAllOrdersParams,
+  ): Promise<PaginatedOrdersResult | Order[]> {
+    if (!params || (params.page === undefined && params.limit === undefined)) {
+      return this.prisma.order.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          customer: true,
+          assets: {
+            include: {
+              asset: {
+                include: {
+                  product: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
+    }
+
+    const page = params.page && params.page > 0 ? params.page : 1;
+    const limit = params.limit && params.limit > 0 ? params.limit : 20;
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          customer: true,
+          assets: {
+            include: {
+              asset: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.order.count(),
+    ]);
+
+    return { orders, total, page, limit };
   }
 
-  public async updateState(id: string, state: OrderState, amountPaid?: number): Promise<Order> {
+  public async updateState(
+    id: string,
+    state: OrderState,
+    amountPaid?: number,
+  ): Promise<OrderWithAssets> {
     return this.prisma.order.update({
       where: { id },
-      data: { 
+      data: {
         state,
-        ...(amountPaid !== undefined && { amountPaid })
+        ...(amountPaid !== undefined && { amountPaid }),
       },
+      include: { assets: true },
     });
   }
 
@@ -87,6 +121,29 @@ export class OrderRepository {
     await this.prisma.asset.updateMany({
       where: { id: { in: assetIds } },
       data: { state },
+    });
+  }
+
+  public async confirmOrderTransaction(
+    orderId: string,
+    amountPaid: number,
+    assetIds: string[],
+  ): Promise<Order> {
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          state: OrderState.RESERVED,
+          amountPaid,
+        },
+      });
+      if (assetIds.length > 0) {
+        await tx.asset.updateMany({
+          where: { id: { in: assetIds } },
+          data: { state: AssetState.RENTED },
+        });
+      }
+      return order;
     });
   }
 
@@ -139,12 +196,14 @@ export class OrderRepository {
   }
 
   public async delete(id: string): Promise<void> {
-    await this.prisma.orderAsset.deleteMany({
-      where: { orderId: id },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.orderAsset.deleteMany({
+        where: { orderId: id },
+      });
 
-    await this.prisma.order.delete({
-      where: { id },
+      await tx.order.delete({
+        where: { id },
+      });
     });
   }
 }

@@ -1,6 +1,13 @@
-import { PrismaClient, Prisma, ProductCategory } from "@prisma/client";
+import { PrismaClient, Prisma, ProductCategory, ProductBase } from "@prisma/client";
+import {
+  IProductRepository,
+  ProductWithAssets,
+  FindAllProductsParams,
+  CreateProductDTO,
+  UpdateProductDTO,
+} from "./contracts/IProductRepository";
 
-export class ProductRepository {
+export class ProductRepository implements IProductRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async findAll({
@@ -8,12 +15,7 @@ export class ProductRepository {
     limit,
     search,
     category,
-  }: {
-    page: number;
-    limit: number;
-    search?: string;
-    category?: string;
-  }) {
+  }: FindAllProductsParams) {
     const skip = (page - 1) * limit;
 
     const where: Prisma.ProductBaseWhereInput = {};
@@ -41,9 +43,18 @@ export class ProductRepository {
     return { products, total };
   }
 
-  public async findById(id: string) {
+  public async findById(id: string): Promise<ProductBase | null> {
     return this.prisma.productBase.findUnique({
       where: { id },
+    });
+  }
+
+  public async findByIdWithAssets(id: string): Promise<ProductWithAssets | null> {
+    return this.prisma.productBase.findUnique({
+      where: { id },
+      include: {
+        assets: true,
+      },
     });
   }
 
@@ -129,14 +140,14 @@ export class ProductRepository {
     });
   }
 
-  public async delete(id: string) {
-    // Delete all assets first
-    await this.prisma.asset.deleteMany({
-      where: { productBaseId: id },
-    });
-    // Delete the product
-    return this.prisma.productBase.delete({
-      where: { id },
+  public async delete(id: string): Promise<ProductBase> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.asset.deleteMany({
+        where: { productBaseId: id },
+      });
+      return tx.productBase.delete({
+        where: { id },
+      });
     });
   }
 }

@@ -1,6 +1,7 @@
 import { AppError } from "../errors/AppError";
 import { OrderState } from "../domain/OrderState";
 import { AssetState } from "../domain/AssetState";
+import { IOrderRepository } from "../repositories/contracts/IOrderRepository";
 
 export interface OrderAssetData {
   assetId: string;
@@ -12,16 +13,12 @@ export interface OrderData {
   assets: OrderAssetData[];
 }
 
-export interface IOrderRepository {
-  findById(id: string): Promise<OrderData | null>;
-  updateState(id: string, state: OrderState): Promise<OrderData>;
-  updateAssetStates(assetIds: string[], state: AssetState): Promise<void>;
-}
+export { IOrderRepository };
 
 export class FinishOrderService {
   constructor(private readonly orderRepository: IOrderRepository) {}
 
-  public async execute(orderId: string): Promise<OrderData> {
+  public async execute(orderId: string): Promise<any> {
     const order = await this.orderRepository.findById(orderId);
 
     if (!order) {
@@ -30,8 +27,7 @@ export class FinishOrderService {
 
     if (
       order.state === OrderState.DRAFT ||
-      order.state === OrderState.COMPLETED ||
-      order.state === OrderState.TOTAL_LOSS
+      order.state === OrderState.COMPLETED
     ) {
       throw new AppError("Order cannot be finished in its current state", 400);
     }

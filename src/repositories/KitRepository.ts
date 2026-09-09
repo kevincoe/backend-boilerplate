@@ -1,19 +1,15 @@
 import { PrismaClient, Kit, KitItem } from "@prisma/client";
+import {
+  IKitRepository,
+  KitWithItems,
+  CreateKitDTO,
+  FindAllKitsParams,
+  PaginatedKitsResult,
+} from "./contracts/IKitRepository";
 
-export type KitWithItems = Kit & { items: KitItem[] };
+export { KitWithItems, CreateKitDTO, FindAllKitsParams, PaginatedKitsResult };
 
-export interface CreateKitDTO {
-  name: string;
-  description?: string;
-  price: number;
-  isFavorited?: boolean;
-  items: {
-    productBaseId: string;
-    quantity: number;
-  }[];
-}
-
-export class KitRepository {
+export class KitRepository implements IKitRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async create(data: CreateKitDTO): Promise<KitWithItems> {
@@ -40,17 +36,43 @@ export class KitRepository {
     });
   }
 
-  public async findAll(): Promise<KitWithItems[]> {
-    return this.prisma.kit.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        items: {
-          include: {
-            productBase: true,
+  public async findAll(
+    params?: FindAllKitsParams,
+  ): Promise<PaginatedKitsResult | KitWithItems[]> {
+    if (!params || (params.page === undefined && params.limit === undefined)) {
+      return this.prisma.kit.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          items: {
+            include: {
+              productBase: true,
+            },
           },
         },
-      },
-    });
+      });
+    }
+
+    const page = params.page && params.page > 0 ? params.page : 1;
+    const limit = params.limit && params.limit > 0 ? params.limit : 20;
+    const skip = (page - 1) * limit;
+
+    const [kits, total] = await Promise.all([
+      this.prisma.kit.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          items: {
+            include: {
+              productBase: true,
+            },
+          },
+        },
+      }),
+      this.prisma.kit.count(),
+    ]);
+
+    return { kits, total, page, limit };
   }
 
   public async findById(id: string): Promise<KitWithItems | null> {
