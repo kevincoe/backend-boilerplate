@@ -1,5 +1,9 @@
 import { AppError } from "../errors/AppError";
 import { OrderState } from "../domain/OrderState";
+import { IOrderRepository } from "../repositories/contracts/IOrderRepository";
+import { IAssetRepository } from "../repositories/contracts/IAssetRepository";
+import { ICustomerRepository } from "../repositories/contracts/ICustomerRepository";
+import { IProductRepository } from "../repositories/contracts/IProductRepository";
 
 export interface AssetData {
   id: string;
@@ -9,47 +13,7 @@ export interface OrderData {
   id: string;
 }
 
-// Interfaces to simulate the Repositories (DAOs) injected via Dependency Inversion
-export interface IOrderRepository {
-  create(data: unknown): Promise<OrderData>;
-  checkAssetsAvailability(
-    assetIds: string[],
-    startDate: Date,
-    endDate: Date,
-  ): Promise<string[]>;
-}
-
-export interface ICustomerRepository {
-  upsertCustomer(data: {
-    name: string;
-    email: string;
-    phone: string;
-    document: string;
-  }): Promise<{ id: string }>;
-}
-
-export interface IAssetRepository {
-  findAssetsByIds(assetIds: string[]): Promise<AssetData[]>;
-  countAvailableAssetsForProduct(
-    productId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<number>;
-  findAvailableAssetsForProduct(
-    productId: string,
-    quantity: number,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<
-    (AssetData & {
-      product: { dailyPrice: import("@prisma/client/runtime/library").Decimal };
-    })[]
-  >;
-}
-
-export interface IProductRepository {
-  findById(id: string): Promise<{ name: string } | null>;
-}
+export { IOrderRepository, IAssetRepository, ICustomerRepository, IProductRepository };
 
 export class CreateQuoteService {
   constructor(
@@ -95,7 +59,7 @@ export class CreateQuoteService {
 
       if (availableCount < item.quantity) {
         throw new AppError(
-          `Estoque insuficiente para o produto "${product.name}". Quantidade solicitada: ${item.quantity}, Disponível: ${availableCount}.`,
+          `Insufficient stock for product "${product.name}". Requested: ${item.quantity}, Available: ${availableCount}.`,
           409,
         );
       }

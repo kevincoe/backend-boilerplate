@@ -1,8 +1,8 @@
-import { ProductRepository } from "../repositories/ProductRepository";
+import { IProductRepository } from "../repositories/contracts/IProductRepository";
 import { AppError } from "../errors/AppError";
 import { ProductCategory } from "@prisma/client";
 
-interface CreateProductRequest {
+export interface CreateProductRequest {
   name: string;
   description?: string;
   category: ProductCategory;
@@ -12,17 +12,17 @@ interface CreateProductRequest {
 }
 
 export class CreateProductService {
-  constructor(private readonly productRepository: ProductRepository) {}
+  constructor(private readonly productRepository: IProductRepository) {}
 
   public async execute(data: CreateProductRequest) {
     if (data.pricePerDay <= 0) {
-      throw new AppError("O preço por dia deve ser maior que zero.", 400);
+      throw new AppError("Daily price must be greater than zero.", 400);
     }
     if (data.stock < 0) {
-      throw new AppError("O estoque não pode ser negativo.", 400);
+      throw new AppError("Stock quantity cannot be negative.", 400);
     }
     if (!(data.category in ProductCategory)) {
-      throw new AppError("Categoria inválida.", 400);
+      throw new AppError("Invalid category.", 400);
     }
 
     const product = await this.productRepository.create(

@@ -1,11 +1,16 @@
-import { Request, Response } from "express";
-import { z } from "zod";
-import { ProductCategory } from "@prisma/client";
+import { Request, Response, NextFunction } from "express";
 import { SearchProductsService } from "../services/SearchProductsService";
 import { CreateProductService } from "../services/CreateProductService";
 import { UpdateProductService } from "../services/UpdateProductService";
 import { UpdateProductStockService } from "../services/UpdateProductStockService";
 import { DeleteProductService } from "../services/DeleteProductService";
+import {
+  searchProductsQuerySchema,
+  createProductSchema,
+  updateProductSchema,
+  updateStockSchema,
+} from "../schemas/product.schema";
+import { idParamSchema } from "../schemas/params.schema";
 
 export class ProductController {
   constructor(
@@ -16,116 +21,78 @@ export class ProductController {
     private readonly deleteService: DeleteProductService,
   ) {}
 
-  public async index(req: Request, res: Response): Promise<Response> {
-    const querySchema = z.object({
-      page: z.coerce.number().int().positive().default(1),
-      limit: z.coerce.number().int().positive().default(10),
-      category: z.string().optional(),
-      search: z.string().optional(),
-    });
-
+  public async index(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const query = querySchema.parse(req.query);
+      const query = searchProductsQuerySchema.parse(req.query);
       const result = await this.searchService.execute(query);
-      return res.json(result);
+      res.status(200).json(result);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      console.error("Erro ao buscar produtos:", error);
-      return res.status(500).json({ error: "Erro interno ao buscar produtos" });
+      next(error);
     }
   }
 
-  public async create(req: Request, res: Response): Promise<Response> {
-    const bodySchema = z.object({
-      name: z.string().min(3),
-      description: z.string().optional(),
-      category: z.nativeEnum(ProductCategory),
-      pricePerDay: z.number().positive(),
-      stock: z.number().int().min(0),
-      imageUrl: z.string().optional(),
-    });
-
+  public async create(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const data = bodySchema.parse(req.body);
+      const data = createProductSchema.parse(req.body);
       const product = await this.createService.execute(data);
-      return res.status(201).json(product);
-    } catch (error: unknown) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      const err = error as { statusCode?: number; message?: string };
-      const statusCode = err.statusCode || 500;
-      return res
-        .status(statusCode)
-        .json({ message: err.message || "Erro interno ao criar produto" });
+      res.status(201).json(product);
+    } catch (error) {
+      next(error);
     }
   }
 
-  public async update(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params;
-    const bodySchema = z.object({
-      name: z.string().min(3).optional(),
-      description: z.string().optional(),
-      category: z.nativeEnum(ProductCategory).optional(),
-      pricePerDay: z.number().positive().optional(),
-      imageUrl: z.string().optional(),
-    });
-
+  public async update(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const data = bodySchema.parse(req.body);
+      const { id } = idParamSchema.parse(req.params);
+      const data = updateProductSchema.parse(req.body);
       const product = await this.updateService.execute({ id, ...data });
-      return res.json(product);
-    } catch (error: unknown) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      const err = error as { statusCode?: number; message?: string };
-      const statusCode = err.statusCode || 500;
-      return res.status(statusCode).json({
-        message: err.message || "Erro interno ao atualizar produto",
-      });
+      res.status(200).json(product);
+    } catch (error) {
+      next(error);
     }
   }
 
-  public async updateStock(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params;
-    const bodySchema = z.object({
-      newStockQuantity: z.number().int().min(0),
-    });
-
+  public async updateStock(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const { newStockQuantity } = bodySchema.parse(req.body);
+      const { id } = idParamSchema.parse(req.params);
+      const { newStockQuantity } = updateStockSchema.parse(req.body);
       const product = await this.updateStockService.execute({
         id,
         newStockQuantity,
       });
-      return res.json(product);
-    } catch (error: unknown) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      const err = error as { statusCode?: number; message?: string };
-      const statusCode = err.statusCode || 500;
-      return res.status(statusCode).json({
-        message: err.message || "Erro interno ao atualizar estoque",
-      });
+      res.status(200).json(product);
+    } catch (error) {
+      next(error);
     }
   }
 
-  public async delete(req: Request, res: Response): Promise<Response> {
-    const { id } = req.params;
-
+  public async delete(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
+      const { id } = idParamSchema.parse(req.params);
       await this.deleteService.execute(id);
-      return res.status(204).send();
-    } catch (error: unknown) {
-      const err = error as { statusCode?: number; message?: string };
-      const statusCode = err.statusCode || 500;
-      return res.status(statusCode).json({
-        message: err.message || "Erro interno ao deletar produto",
-      });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
     }
   }
 }

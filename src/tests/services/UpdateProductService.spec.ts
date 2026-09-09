@@ -26,7 +26,7 @@ describe("UpdateProductService", () => {
     (productRepositoryMock.findById as Mock).mockResolvedValue(null);
 
     await expect(updateProductService.execute({ id: "invalid" })).rejects.toThrow(
-      new AppError("Produto não encontrado.", 404)
+      new AppError("Product not found.", 404)
     );
   });
 
@@ -35,7 +35,7 @@ describe("UpdateProductService", () => {
 
     await expect(
       updateProductService.execute({ id: "prod-1", pricePerDay: -5 })
-    ).rejects.toThrow(new AppError("O preço por dia deve ser maior que zero.", 400));
+    ).rejects.toThrow(new AppError("Daily price must be greater than zero.", 400));
   });
 
   it("should successfully update a product mapping pricePerDay to dailyPrice", async () => {

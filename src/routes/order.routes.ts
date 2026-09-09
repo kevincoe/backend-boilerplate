@@ -1,49 +1,5 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { OrderController } from "../controllers/order.controller";
-import { CreateQuoteService } from "../services/CreateQuoteService";
-import { ConfirmOrderService } from "../services/ConfirmOrderService";
-import { FinishOrderService } from "../services/FinishOrderService";
-import { ListOrdersService } from "../services/ListOrdersService";
-import { UpdateOrderService } from "../services/UpdateOrderService";
-import { DeleteOrderService } from "../services/DeleteOrderService";
-import { OrderRepository } from "../repositories/OrderRepository";
-import { AssetRepository } from "../repositories/AssetRepository";
-import { CustomerRepository } from "../repositories/CustomerRepository";
-import { ProductRepository } from "../repositories/ProductRepository";
-
-const connectionString = `${process.env.DATABASE_URL}`;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-const orderRepository = new OrderRepository(prisma);
-const assetRepository = new AssetRepository(prisma);
-const customerRepository = new CustomerRepository(prisma);
-const productRepository = new ProductRepository(prisma);
-
-const createQuoteService = new CreateQuoteService(
-  orderRepository,
-  assetRepository,
-  customerRepository,
-  productRepository,
-);
-const confirmOrderService = new ConfirmOrderService(orderRepository);
-const finishOrderService = new FinishOrderService(orderRepository);
-const listOrdersService = new ListOrdersService(orderRepository);
-const updateOrderService = new UpdateOrderService(orderRepository);
-const deleteOrderService = new DeleteOrderService(orderRepository);
-
-const orderController = new OrderController(
-  createQuoteService,
-  confirmOrderService,
-  finishOrderService,
-  listOrdersService,
-  updateOrderService,
-  deleteOrderService,
-);
+import { orderController } from "../infra/container";
 
 export const orderRoutes = Router();
 

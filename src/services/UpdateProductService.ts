@@ -1,8 +1,8 @@
-import { ProductRepository } from "../repositories/ProductRepository";
+import { IProductRepository } from "../repositories/contracts/IProductRepository";
 import { AppError } from "../errors/AppError";
 import { ProductCategory } from "@prisma/client";
 
-interface UpdateProductRequest {
+export interface UpdateProductRequest {
   id: string;
   name?: string;
   description?: string;
@@ -12,16 +12,16 @@ interface UpdateProductRequest {
 }
 
 export class UpdateProductService {
-  constructor(private readonly productRepository: ProductRepository) {}
+  constructor(private readonly productRepository: IProductRepository) {}
 
   public async execute({ id, pricePerDay, ...data }: UpdateProductRequest) {
     const productExists = await this.productRepository.findById(id);
     if (!productExists) {
-      throw new AppError("Produto não encontrado.", 404);
+      throw new AppError("Product not found.", 404);
     }
 
     if (pricePerDay !== undefined && pricePerDay <= 0) {
-      throw new AppError("O preço por dia deve ser maior que zero.", 400);
+      throw new AppError("Daily price must be greater than zero.", 400);
     }
 
     const updateData = {

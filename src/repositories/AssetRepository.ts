@@ -1,7 +1,8 @@
-import { PrismaClient, Asset } from "@prisma/client";
+import { PrismaClient, Asset, Prisma } from "@prisma/client";
 import { OrderState } from "../domain/OrderState";
+import { IAssetRepository, AssetWithProduct } from "./contracts/IAssetRepository";
 
-export class AssetRepository {
+export class AssetRepository implements IAssetRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async findAssetsByIds(assetIds: string[]): Promise<Asset[]> {
@@ -19,7 +20,7 @@ export class AssetRepository {
     endDate: Date,
   ): Promise<
     (Asset & {
-      product: { dailyPrice: import("@prisma/client/runtime/library").Decimal };
+      product: { dailyPrice: Prisma.Decimal };
     })[]
   > {
     const blockingStates: OrderState[] = [

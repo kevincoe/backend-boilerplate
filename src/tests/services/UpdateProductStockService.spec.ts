@@ -9,6 +9,7 @@ describe("UpdateProductStockService", () => {
   beforeEach(() => {
     productRepositoryMock = {
       findById: vi.fn(),
+      findByIdWithAssets: vi.fn(),
       update: vi.fn(),
       addAssets: vi.fn(),
       getAvailableAssets: vi.fn(),
@@ -40,20 +41,21 @@ describe("UpdateProductStockService", () => {
   it("should throw an error if new stock is negative", async () => {
     await expect(
       updateProductStockService.execute({ id: "prod-1", newStockQuantity: -1 })
-    ).rejects.toThrow(new AppError("O estoque não pode ser negativo.", 400));
+    ).rejects.toThrow(new AppError("Stock quantity cannot be negative.", 400));
   });
 
   it("should throw an error if product is not found", async () => {
     (productRepositoryMock.findById as Mock).mockResolvedValue(null);
+    (productRepositoryMock.findByIdWithAssets as Mock).mockResolvedValue(null);
 
     await expect(
       updateProductStockService.execute({ id: "invalid", newStockQuantity: 5 })
-    ).rejects.toThrow(new AppError("Produto não encontrado.", 404));
+    ).rejects.toThrow(new AppError("Product not found.", 404));
   });
 
   it("should increase stock and add new assets", async () => {
     (productRepositoryMock.findById as Mock).mockResolvedValue(mockProduct);
-    (productRepositoryMock.update as Mock).mockResolvedValue(mockProductWithAssets);
+    (productRepositoryMock.findByIdWithAssets as Mock).mockResolvedValue(mockProductWithAssets);
     
     // Changing from 2 to 4
     await updateProductStockService.execute({ id: "prod-1", newStockQuantity: 4 });
@@ -64,7 +66,7 @@ describe("UpdateProductStockService", () => {
 
   it("should decrease stock and remove available assets", async () => {
     (productRepositoryMock.findById as Mock).mockResolvedValue(mockProduct);
-    (productRepositoryMock.update as Mock).mockResolvedValue(mockProductWithAssets);
+    (productRepositoryMock.findByIdWithAssets as Mock).mockResolvedValue(mockProductWithAssets);
     
     // Mock getAvailableAssets returning 1 asset to be removed
     (productRepositoryMock.getAvailableAssets as Mock).mockResolvedValue([{ id: "asset-1" }]);
@@ -88,7 +90,7 @@ describe("UpdateProductStockService", () => {
         { id: "asset-2", state: "RENTED" },
       ],
     };
-    (productRepositoryMock.update as Mock).mockResolvedValue(mixedAssetsProduct);
+    (productRepositoryMock.findByIdWithAssets as Mock).mockResolvedValue(mixedAssetsProduct);
     
     // We want to remove 2 items (changing stock from 2 to 0)
     // But getAvailableAssets only returns 1
@@ -98,7 +100,7 @@ describe("UpdateProductStockService", () => {
       updateProductStockService.execute({ id: "prod-1", newStockQuantity: 0 })
     ).rejects.toThrow(
       new AppError(
-        "Não é possível reduzir o estoque em 2. Apenas 1 unidades estão 'AVAILABLE' (as demais estão alugadas ou reservadas).",
+        "Cannot reduce stock by 2. Only 1 units are AVAILABLE (the rest are rented or reserved).",
         400
       )
     );

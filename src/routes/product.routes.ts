@@ -1,51 +1,21 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { ProductController } from "../controllers/ProductController";
-import { ProductRepository } from "../repositories/ProductRepository";
-import { SearchProductsService } from "../services/SearchProductsService";
-import { CreateProductService } from "../services/CreateProductService";
-import { UpdateProductService } from "../services/UpdateProductService";
-import { UpdateProductStockService } from "../services/UpdateProductStockService";
-import { DeleteProductService } from "../services/DeleteProductService";
+import { productController } from "../infra/container";
 
-const connectionString = `${process.env.DATABASE_URL}`;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-const productRepository = new ProductRepository(prisma);
-const searchService = new SearchProductsService(productRepository);
-const createService = new CreateProductService(productRepository);
-const updateService = new UpdateProductService(productRepository);
-const updateStockService = new UpdateProductStockService(productRepository);
-const deleteService = new DeleteProductService(productRepository);
-
-const productRoutes = Router();
-const productController = new ProductController(
-  searchService,
-  createService,
-  updateService,
-  updateStockService,
-  deleteService,
-);
+export const productRoutes = Router();
 
 // GET /api/products
-productRoutes.get("/", (req, res) => productController.index(req, res));
+productRoutes.get("/", (req, res, next) => productController.index(req, res, next));
 
 // POST /api/products
-productRoutes.post("/", (req, res) => productController.create(req, res));
+productRoutes.post("/", (req, res, next) => productController.create(req, res, next));
 
 // PUT /api/products/:id
-productRoutes.put("/:id", (req, res) => productController.update(req, res));
+productRoutes.put("/:id", (req, res, next) => productController.update(req, res, next));
 
 // PATCH /api/products/:id/stock
-productRoutes.patch("/:id/stock", (req, res) =>
-  productController.updateStock(req, res),
+productRoutes.patch("/:id/stock", (req, res, next) =>
+  productController.updateStock(req, res, next),
 );
 
 // DELETE /api/products/:id
-productRoutes.delete("/:id", (req, res) => productController.delete(req, res));
-
-export { productRoutes };
+productRoutes.delete("/:id", (req, res, next) => productController.delete(req, res, next));

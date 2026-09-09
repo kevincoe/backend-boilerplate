@@ -28,6 +28,7 @@ enum AssetState {
 enum ProductCategory {
   MOVEIS
   DECORACAO
+  TABLEWARE
   LOUÇAS
   TECIDOS
   ELETRONICOS
@@ -35,15 +36,17 @@ enum ProductCategory {
 }
 
 model Customer {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  phone     String
-  document  String   @unique // CPF/CNPJ
-  score     Int      @default(10) // Score de confiabilidade
-  orders    Order[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  phone        String
+  document     String        @unique // CPF/CNPJ
+  score        Int           @default(10) // Score de confiabilidade
+  orders       Order[]
+  contacts     Contact[]
+  interactions Interaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model ProductBase {
@@ -69,6 +72,8 @@ model Asset {
   maintenanceLog MaintenanceLog[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+
+  @@index([productBaseId, state])
 }
 
 model Order {
@@ -83,6 +88,10 @@ model Order {
   assets      OrderAsset[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@index([customerId])
+  @@index([state])
+  @@index([pickUpDate, returnDate])
 }
 
 // Tabela associativa (N:M) explícita para registrar quais ativos estão em quais pedidos
@@ -124,4 +133,59 @@ model KitItem {
   productBaseId String
   productBase   ProductBase @relation(fields: [productBaseId], references: [id])
   quantity      Int         @default(1)
+
+  @@index([kitId])
+  @@index([productBaseId])
+}
+
+enum ContactType {
+  EMAIL
+  PHONE
+  WHATSAPP
+  IN_PERSON
+  OTHER
+}
+
+enum InteractionType {
+  NOTE
+  CALL
+  EMAIL
+  MEETING
+  QUOTE_CREATED
+  ORDER_CONFIRMED
+  ORDER_COMPLETED
+  COMPLAINT
+  FEEDBACK
+}
+
+model Contact {
+  id         String      @id @default(uuid())
+  customerId String
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type       ContactType
+  value      String      // email address, phone number, etc.
+  label      String?     // e.g. "Work", "Personal"
+  isPrimary  Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([customerId])
+  @@unique([type, value])
+}
+
+model Interaction {
+  id          String          @id @default(uuid())
+  customerId  String
+  customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type        InteractionType
+  subject     String
+  description String?
+  metadata    Json?           // flexible field for order IDs, etc.
+  performedAt DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([customerId])
+  @@index([performedAt])
+  @@index([type])
 }

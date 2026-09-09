@@ -28,7 +28,7 @@ export function errorHandler(
     });
     return res
       .status(400)
-      .json({ error: "Validation failed", details: err.errors });
+      .json({ error: "Validation failed", details: err.issues });
   }
 
   logger.error("Internal Server Error", { error: err.message, stack: err.stack });

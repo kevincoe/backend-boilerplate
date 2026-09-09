@@ -1,9 +1,16 @@
-import { KitRepository, KitWithItems } from "../repositories/KitRepository";
+import {
+  IKitRepository,
+  KitWithItems,
+  PaginatedKitsResult,
+  FindAllKitsParams,
+} from "../repositories/contracts/IKitRepository";
 
 export class ListKitsService {
-  constructor(private readonly kitRepository: KitRepository) {}
+  constructor(private readonly kitRepository: IKitRepository) {}
 
-  public async execute(): Promise<KitWithItems[]> {
-    return this.kitRepository.findAll();
+  public async execute(
+    params?: FindAllKitsParams,
+  ): Promise<PaginatedKitsResult | KitWithItems[]> {
+    return this.kitRepository.findAll(params);
   }
 }

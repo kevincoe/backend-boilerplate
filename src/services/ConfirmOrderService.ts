@@ -1,6 +1,7 @@
 import { AppError } from "../errors/AppError";
 import { OrderState } from "../domain/OrderState";
 import { AssetState } from "../domain/AssetState";
+import { IOrderRepository } from "../repositories/contracts/IOrderRepository";
 
 export interface OrderAssetData {
   assetId: string;
@@ -9,25 +10,13 @@ export interface OrderAssetData {
 export interface OrderData {
   id: string;
   state: string;
-  totalAmount: number | string;
+  totalAmount: unknown;
   pickUpDate: Date | string;
   returnDate: Date | string;
   assets: OrderAssetData[];
 }
 
-// Atualizando a interface do Repository (seria o nosso port para o Prisma)
-export interface IOrderRepository {
-  findById(id: string): Promise<OrderData | null>;
-  updateState(id: string, state: OrderState, amountPaid?: number): Promise<OrderData>;
-  updateAssetStates(assetIds: string[], state: AssetState): Promise<void>;
-  // Repare no excludeOrderId: ignoramos o próprio pedido para não dar falso positivo
-  checkAssetsAvailability(
-    assetIds: string[],
-    startDate: Date,
-    endDate: Date,
-    excludeOrderId?: string,
-  ): Promise<string[]>;
-}
+export { IOrderRepository };
 
 export class ConfirmOrderService {
   constructor(private readonly orderRepository: IOrderRepository) {}
@@ -35,14 +24,14 @@ export class ConfirmOrderService {
   public async execute(
     orderId: string,
     paymentAmount: number,
-  ): Promise<OrderData> {
+  ): Promise<any> {
     const order = await this.orderRepository.findById(orderId);
 
     if (!order) {
       throw new AppError("Order not found", 404);
     }
 
-    // Regra: Só pode confirmar pedidos que estejam em Rascunho ou Aguardando Sinal
+    // Rule: Only confirm orders in DRAFT or AWAITING_DEPOSIT state
     if (
       order.state !== OrderState.DRAFT &&
       order.state !== OrderState.AWAITING_DEPOSIT
@@ -50,7 +39,7 @@ export class ConfirmOrderService {
       throw new AppError("Order cannot be confirmed in its current state", 400);
     }
 
-    // Regra: Exigir no mínimo 50% de sinal
+    // Rule: Require at least 50% deposit
     const minDeposit = Number(order.totalAmount) * 0.5;
     if (paymentAmount < minDeposit) {
       throw new AppError(
@@ -59,9 +48,7 @@ export class ConfirmOrderService {
       );
     }
 
-    // REGRA CRÍTICA: Prevenção de Race Condition
-    // Como o cliente pode ter demorado a pagar, re-checamos se os ativos ainda estão livres
-    // Precisamos aplicar novamente o "buffer" de higienização
+    // Race condition prevention: re-check asset availability with buffer
     const returnDateWithBuffer = new Date(order.returnDate);
     returnDateWithBuffer.setDate(returnDateWithBuffer.getDate() + 1);
 
@@ -70,12 +57,12 @@ export class ConfirmOrderService {
         order.assets.map((a: OrderAssetData) => a.assetId),
         new Date(order.pickUpDate),
         returnDateWithBuffer,
-        order.id, // Excluímos o próprio pedido da busca
+        order.id,
       );
 
     if (unavailableAssetIds.length > 0) {
       throw new AppError(
-        "Conflito de reserva detectado: Alguns equipamentos não estão mais disponíveis para as datas selecionadas.",
+        "Reservation conflict detected: Some equipment is no longer available for the selected dates.",
         409,
       );
     }

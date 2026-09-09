@@ -1,6 +1,6 @@
-import { ProductRepository } from "../repositories/ProductRepository";
+import { IProductRepository } from "../repositories/contracts/IProductRepository";
 
-interface SearchProductsRequest {
+export interface SearchProductsRequest {
   page: number;
   limit: number;
   search?: string;
@@ -8,7 +8,7 @@ interface SearchProductsRequest {
 }
 
 export class SearchProductsService {
-  constructor(private readonly productRepository: ProductRepository) {}
+  constructor(private readonly productRepository: IProductRepository) {}
 
   public async execute({
     page,

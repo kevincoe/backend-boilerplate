@@ -4,31 +4,42 @@ import { AppError } from "../../errors/AppError";
 import { OrderState } from "../../domain/OrderState";
 
 describe("CreateQuoteService", () => {
-  let orderRepositoryMock: ReturnType<typeof vi.fn>;
-  let assetRepositoryMock: ReturnType<typeof vi.fn>;
-  let customerRepositoryMock: ReturnType<typeof vi.fn>;
-  let productRepositoryMock: ReturnType<typeof vi.fn>;
+  let orderRepositoryMock: {
+    create: Mock;
+    checkAssetsAvailability: Mock;
+  };
+  let assetRepositoryMock: {
+    findAssetsByIds: Mock;
+    countAvailableAssetsForProduct: Mock;
+    findAvailableAssetsForProduct: Mock;
+  };
+  let customerRepositoryMock: {
+    upsertCustomer: Mock;
+  };
+  let productRepositoryMock: {
+    findById: Mock;
+  };
   let createQuoteService: CreateQuoteService;
 
   beforeEach(() => {
     orderRepositoryMock = {
       create: vi.fn(),
       checkAssetsAvailability: vi.fn(),
-    } as unknown as ReturnType<typeof vi.fn>;
+    };
 
     assetRepositoryMock = {
       findAssetsByIds: vi.fn(),
       countAvailableAssetsForProduct: vi.fn(),
       findAvailableAssetsForProduct: vi.fn(),
-    } as unknown as ReturnType<typeof vi.fn>;
+    };
 
     customerRepositoryMock = {
       upsertCustomer: vi.fn(),
-    } as unknown as ReturnType<typeof vi.fn>;
+    };
 
     productRepositoryMock = {
       findById: vi.fn(),
-    } as unknown as ReturnType<typeof vi.fn>;
+    };
 
     createQuoteService = new CreateQuoteService(
       orderRepositoryMock as unknown as IOrderRepository,
@@ -58,7 +69,7 @@ describe("CreateQuoteService", () => {
     (assetRepositoryMock.countAvailableAssetsForProduct as Mock).mockResolvedValue(1); // Needs 2, only 1 available
 
     await expect(createQuoteService.execute(validQuoteRequest)).rejects.toThrow(
-      new AppError('Estoque insuficiente para o produto "Cadeira". Quantidade solicitada: 2, Disponível: 1.', 409)
+      new AppError('Insufficient stock for product "Cadeira". Requested: 2, Available: 1.', 409)
     );
   });
 

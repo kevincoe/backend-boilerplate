@@ -29,7 +29,7 @@ describe("UpdateOrderService", () => {
     (orderRepositoryMock.findById as Mock).mockResolvedValue(null);
 
     await expect(updateOrderService.execute({ id: "invalid" })).rejects.toThrow(
-      new AppError("Pedido não encontrado.", 404)
+      new AppError("Order not found.", 404)
     );
   });
 
@@ -40,7 +40,7 @@ describe("UpdateOrderService", () => {
     });
 
     await expect(updateOrderService.execute({ id: "order-1" })).rejects.toThrow(
-      new AppError("Não é possível editar um pedido já finalizado.", 400)
+      new AppError("Cannot edit an order that has already been finished.", 400)
     );
   });
 
@@ -53,7 +53,7 @@ describe("UpdateOrderService", () => {
         pickUpDate: "2026-08-10",
         returnDate: "2026-08-05", // pickup > return
       })
-    ).rejects.toThrow(new AppError("A data de devolução deve ser posterior à data de retirada.", 400));
+    ).rejects.toThrow(new AppError("Return date must be after pick-up date.", 400));
   });
 
   it("should check assets availability if order is NOT DRAFT and dates changed", async () => {
@@ -68,7 +68,7 @@ describe("UpdateOrderService", () => {
       })
     ).rejects.toThrow(
       new AppError(
-        "Conflito de reserva detectado: As novas datas colidem com locações existentes para os equipamentos deste pedido.",
+        "Reservation conflict detected: The new dates conflict with existing rentals for the equipment in this order.",
         409
       )
     );

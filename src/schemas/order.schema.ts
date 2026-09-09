@@ -33,3 +33,9 @@ export const confirmOrderSchema = z.object({
     .number()
     .positive("Payment amount must be greater than zero"),
 });
+
+export const updateOrderSchema = z.object({
+  pickUpDate: z.string().datetime().optional(),
+  returnDate: z.string().datetime().optional(),
+  totalAmount: z.number().positive().optional(),
+});

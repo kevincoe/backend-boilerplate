@@ -20,7 +20,7 @@ describe("DeleteOrderService", () => {
     (orderRepositoryMock.findById as Mock).mockResolvedValue(null);
 
     await expect(deleteOrderService.execute("invalid-id")).rejects.toThrow(
-      new AppError("Pedido não encontrado.", 404)
+      new AppError("Order not found.", 404)
     );
   });
 
@@ -32,7 +32,7 @@ describe("DeleteOrderService", () => {
 
     await expect(deleteOrderService.execute("order-1")).rejects.toThrow(
       new AppError(
-        "Não é possível excluir um pedido que está em andamento ou aguardando depósito. Finalize ou cancele o pedido primeiro.",
+        "Cannot delete an order that is in progress or awaiting deposit. Please finish or cancel the order first.",
         400
       )
     );
